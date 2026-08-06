@@ -1,0 +1,96 @@
+# Parcel Equalization Engine (PEE)
+
+Automatically rebalance subdivided land parcels to target areas while preserving topology.
+
+## Quick Start
+
+```python
+from pee import equalize
+
+# Internal JSON format: outer polygon + parcel polygons
+geojson = {
+    "outer": {
+        "type": "Polygon",
+        "coordinates": [[[0,0],[30,0],[30,10],[0,10],[0,0]]]
+    },
+    "parcels": [
+        {"type": "Polygon", "coordinates": [[[0,0],[8,0],[8,10],[0,10],[0,0]]]},
+        {"type": "Polygon", "coordinates": [[[8,0],[22,0],[22,10],[8,10],[8,0]]]},
+        {"type": "Polygon", "coordinates": [[[22,0],[30,0],[30,10],[22,10],[22,0]]]}
+    ]
+}
+
+# Mark all interior edges movable and equalize
+result = equalize(geojson, all_interior_movable=True)
+
+print(result["stats"])
+# {'success': True, 'iterations': 12, 'max_area_error_pct': 0.0, ...}
+
+for f in result["features"]:
+    p = f["properties"]
+    print(f"Parcel {p['id']}: area={p['area']:.2f} m² (target={p['target_area']:.2f})")
+# Parcel 0: area=100.00 m² (target=100.00)
+# Parcel 1: area=100.00 m² (target=100.00)
+# Parcel 2: area=100.00 m² (target=100.00)
+```
+
+## Explicit Edge Configuration
+
+```python
+from pee import equalize
+from pee.loader import EdgeConfig
+
+result = equalize(
+    geojson,
+    movable_edges=[
+        EdgeConfig(v0=(8, 0),  v1=(8, 10),  min_offset=-3, max_offset=3),
+        EdgeConfig(v0=(22, 0), v1=(22, 10), min_offset=-3, max_offset=3),
+    ]
+)
+```
+
+## Weighted Target Areas
+
+```python
+result = equalize(
+    geojson,
+    all_interior_movable=True,
+    target_areas={0: 150.0, 1: 100.0, 2: 50.0}
+)
+```
+
+## Input Formats
+
+| Format | Example |
+|--------|---------|
+| Internal JSON | `{"outer": {...}, "parcels": [...]}` |
+| GeoJSON FeatureCollection | Features with `"role": "outer"` / `"role": "parcel"` |
+| WKT | `load_wkt(outer_wkt, parcel_wkts)` |
+
+## Installation
+
+```bash
+pip install -e ".[dev]"
+pytest tests/ -v --cov=pee
+```
+
+## Architecture
+
+```
+GeoJSON / WKT
+    │
+    ▼
+load_geojson()       → Topology (vertices + edges + parcels)
+    │
+    ▼
+configure_movable_edges()   → marks edges with offsets/bounds
+    │
+    ▼
+optimize()           → SLSQP minimises Σ(area − target)²
+    │
+    ▼
+validate()           → checks validity, no gaps, no overlaps
+    │
+    ▼
+to_geojson()         → FeatureCollection + stats
+```

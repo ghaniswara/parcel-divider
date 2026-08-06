@@ -1,0 +1,3795 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Parcel Equalization Engine</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0d1117;
+        --bg2: #161b22;
+        --bg3: #21262d;
+        --bg4: #1c2128;
+        --border: #30363d;
+        --accent: #58a6ff;
+        --g: #3fb950;
+        --r: #f78166;
+        --y: #d29922;
+        --p: #a371f7;
+        --text: #e6edf3;
+        --t2: #8b949e;
+        --t3: #6e7681;
+        --rad: 8px;
+        --sh: 0 8px 32px rgba(0, 0, 0, 0.55);
+      }
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        height: 100%;
+        font-family: "Inter", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        overflow: hidden;
+      }
+
+      /* layout */
+      #app {
+        display: grid;
+        grid-template-rows: 50px 1fr;
+        height: 100vh;
+      }
+      #main {
+        display: grid;
+        grid-template-columns: 288px 1fr 272px;
+        overflow: hidden;
+      }
+
+      /* header */
+      header {
+        background: var(--bg2);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 16px;
+        box-shadow: var(--sh);
+        z-index: 10;
+      }
+      .logo-i {
+        width: 26px;
+        height: 26px;
+        border-radius: 6px;
+        background: linear-gradient(135deg, #58a6ff, #a371f7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 9px;
+        font-weight: 800;
+        color: #fff;
+        letter-spacing: -1px;
+      }
+      .logo-t {
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .badge {
+        font-size: 9px;
+        background: var(--bg3);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 1px 5px;
+        color: var(--t2);
+      }
+      .sp {
+        flex: 1;
+      }
+      .hs {
+        font-size: 11px;
+        color: var(--t2);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .hs b {
+        color: var(--text);
+        font-weight: 600;
+      }
+      .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--t3);
+        transition: background 0.3s;
+      }
+      .dot.on {
+        background: var(--g);
+        box-shadow: 0 0 5px var(--g);
+      }
+
+      /* sidebar */
+      #sidebar {
+        background: var(--bg2);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+      .sec {
+        border-bottom: 1px solid var(--border);
+        padding: 13px 14px;
+      }
+      .sec:last-child {
+        border-bottom: none;
+      }
+      .sh {
+        font-size: 9px;
+        font-weight: 700;
+        color: var(--t3);
+        text-transform: uppercase;
+        letter-spacing: 0.9px;
+        margin-bottom: 9px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .sh-badge {
+        font-size: 8px;
+        background: var(--p);
+        color: #fff;
+        border-radius: 3px;
+        padding: 1px 5px;
+        font-weight: 600;
+      }
+
+      /* button */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 6px 12px;
+        border-radius: var(--rad);
+        border: 1px solid transparent;
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s;
+        white-space: nowrap;
+      }
+      .btn-p {
+        background: var(--accent);
+        color: #0d1117;
+      }
+      .btn-p:hover {
+        background: #79b8ff;
+        box-shadow: 0 0 14px rgba(88, 166, 255, 0.3);
+        transform: translateY(-1px);
+      }
+      .btn-g {
+        background: var(--bg3);
+        color: var(--text);
+        border-color: var(--border);
+      }
+      .btn-g:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .btn-r {
+        background: transparent;
+        color: var(--r);
+        border-color: var(--r);
+      }
+      .btn-r:hover {
+        background: var(--r);
+        color: #fff;
+      }
+      .btn-draw {
+        background: transparent;
+        color: var(--p);
+        border-color: var(--p);
+      }
+      .btn-draw.active {
+        background: var(--p);
+        color: #fff;
+      }
+      .btn:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+        transform: none !important;
+      }
+      .brow {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+
+      /* form */
+      .fr {
+        margin-bottom: 8px;
+      }
+      .fr label {
+        display: block;
+        font-size: 10px;
+        color: var(--t2);
+        margin-bottom: 3px;
+        font-weight: 500;
+      }
+      .fr input,
+      .fr select,
+      .fr textarea {
+        width: 100%;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 11px;
+        padding: 5px 8px;
+        outline: none;
+        transition: border-color 0.15s;
+      }
+      .fr input:focus,
+      .fr select:focus,
+      .fr textarea:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.1);
+      }
+      .fr textarea {
+        resize: vertical;
+        min-height: 60px;
+      }
+      .fi2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 7px;
+      }
+
+      /* slider */
+      .slid-wrap {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .slid-wrap input[type="range"] {
+        flex: 1;
+        accent-color: var(--accent);
+        cursor: pointer;
+      }
+      .slid-val {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--accent);
+        min-width: 20px;
+        text-align: center;
+      }
+
+      /* toggle */
+      .tr {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+      .tr label {
+        font-size: 11px;
+        color: var(--t2);
+      }
+      .tog {
+        width: 32px;
+        height: 17px;
+        background: var(--bg3);
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        cursor: pointer;
+        position: relative;
+        transition: background 0.2s;
+        flex-shrink: 0;
+      }
+      .tog.on {
+        background: var(--g);
+        border-color: var(--g);
+      }
+      .tog::after {
+        content: "";
+        width: 11px;
+        height: 11px;
+        background: #fff;
+        border-radius: 50%;
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        transition: left 0.2s;
+      }
+      .tog.on::after {
+        left: 17px;
+      }
+
+      /* draw status */
+      #draw-status {
+        font-size: 11px;
+        color: var(--t2);
+        padding: 7px 10px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        margin-bottom: 8px;
+        line-height: 1.5;
+      }
+      #draw-status b {
+        color: var(--p);
+      }
+      #draw-status.done b {
+        color: var(--g);
+      }
+
+      /* canvas area */
+      #cv-wrap {
+        position: relative;
+        background: var(--bg);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      #cv-bar {
+        padding: 6px 12px;
+        background: var(--bg2);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .tb {
+        padding: 4px 10px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: var(--bg3);
+        color: var(--t2);
+        font-size: 11px;
+        cursor: pointer;
+        font-family: inherit;
+        transition: all 0.15s;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .tb:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .tb.on {
+        background: var(--accent);
+        color: #0d1117;
+        border-color: var(--accent);
+      }
+      .tb.on-p {
+        background: var(--p);
+        color: #fff;
+        border-color: var(--p);
+      }
+      .tb.on-y {
+        background: var(--y);
+        color: #0d1117;
+        border-color: var(--y);
+      }
+      #cv-ctr {
+        flex: 1;
+        position: relative;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        outline: none;
+      }
+      .hint {
+        position: absolute;
+        bottom: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(13, 17, 23, 0.9);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 5px 14px;
+        font-size: 11px;
+        color: var(--t2);
+        pointer-events: none;
+        backdrop-filter: blur(8px);
+        white-space: nowrap;
+        transition: opacity 0.3s;
+      }
+
+      /* coords display */
+      #coords {
+        position: absolute;
+        bottom: 12px;
+        right: 14px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 10px;
+        color: var(--t3);
+        background: rgba(13, 17, 23, 0.7);
+        padding: 3px 8px;
+        border-radius: 4px;
+        pointer-events: none;
+      }
+
+      /* right panel */
+      #right {
+        background: var(--bg2);
+        border-left: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .tabs {
+        display: flex;
+        border-bottom: 1px solid var(--border);
+      }
+      .tab {
+        flex: 1;
+        padding: 10px 5px;
+        font-size: 11px;
+        font-weight: 500;
+        text-align: center;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        color: var(--t2);
+        transition: all 0.15s;
+        user-select: none;
+      }
+      .tab.on {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+      }
+      .tc {
+        display: none;
+        flex: 1;
+        overflow-y: auto;
+        padding: 13px;
+      }
+      .tc.on {
+        display: block;
+      }
+
+      /* parcel card */
+      .pc {
+        background: var(--bg3);
+        border: 1px solid var(--border);
+        border-radius: var(--rad);
+        padding: 9px 11px;
+        margin-bottom: 6px;
+        cursor: pointer;
+        transition: border-color 0.15s;
+      }
+      .pc:hover {
+        border-color: #3a4150;
+      }
+      .pc.sel {
+        border-color: var(--accent);
+        box-shadow: 0 0 14px rgba(88, 166, 255, 0.1);
+      }
+      .pch {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-bottom: 4px;
+      }
+      .pcd {
+        width: 8px;
+        height: 8px;
+        border-radius: 2px;
+        flex-shrink: 0;
+      }
+      .pcn {
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .pca {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 10px;
+        color: var(--t2);
+      }
+      .pce {
+        font-size: 9px;
+        margin-top: 3px;
+      }
+      .eg {
+        color: var(--g);
+      }
+      .ew {
+        color: var(--y);
+      }
+      .eb {
+        color: var(--r);
+      }
+      .pb {
+        height: 3px;
+        background: var(--bg);
+        border-radius: 2px;
+        margin-top: 5px;
+        overflow: hidden;
+      }
+      .pf {
+        height: 100%;
+        border-radius: 2px;
+        transition: width 0.5s ease;
+      }
+
+      /* stats */
+      .sg {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        margin-bottom: 10px;
+      }
+      .sc {
+        background: var(--bg3);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 8px 10px;
+      }
+      .sl {
+        font-size: 9px;
+        color: var(--t3);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .sv {
+        font-size: 16px;
+        font-weight: 700;
+        font-family: "JetBrains Mono", monospace;
+        margin-top: 1px;
+      }
+      .sv.g {
+        color: var(--g);
+      }
+      .sv.r {
+        color: var(--r);
+      }
+      .sv.a {
+        color: var(--accent);
+      }
+
+      /* log */
+      #log {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 10px;
+        color: var(--t2);
+        white-space: pre-wrap;
+        word-break: break-all;
+        padding: 9px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        max-height: 100%;
+        overflow-y: auto;
+        line-height: 1.7;
+      }
+      .lok {
+        color: var(--g);
+      }
+      .lr {
+        color: var(--r);
+      }
+      .la {
+        color: var(--accent);
+      }
+      .ly {
+        color: var(--y);
+      }
+
+      /* toast */
+      #toasts {
+        position: fixed;
+        top: 62px;
+        right: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        z-index: 999;
+      }
+      .toast {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        padding: 8px 13px;
+        font-size: 11px;
+        box-shadow: var(--sh);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        animation: tin 0.2s ease;
+        max-width: 280px;
+      }
+      .toast.ok {
+        border-color: var(--g);
+      }
+      .toast.er {
+        border-color: var(--r);
+      }
+      @keyframes tin {
+        from {
+          opacity: 0;
+          transform: translateX(14px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+
+      /* spinner */
+      .sp2 {
+        width: 12px;
+        height: 12px;
+        border: 2px solid transparent;
+        border-top-color: currentColor;
+        border-radius: 50%;
+        animation: rot 0.7s linear infinite;
+        display: inline-block;
+      }
+      @keyframes rot {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      ::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 2px;
+      }
+
+      /* modal */
+      #modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.72);
+        z-index: 500;
+        align-items: center;
+        justify-content: center;
+      }
+      #modal.open {
+        display: flex;
+      }
+      .mbox {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 20px;
+        width: 480px;
+        max-height: 78vh;
+        overflow-y: auto;
+        box-shadow: var(--sh);
+      }
+      .mt {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 12px;
+      }
+      .mf {
+        display: flex;
+        gap: 7px;
+        margin-top: 12px;
+        justify-content: flex-end;
+      }
+
+      /* step indicator */
+      .steps {
+        display: flex;
+        gap: 0;
+        margin-bottom: 12px;
+      }
+      .step {
+        flex: 1;
+        padding: 5px 0;
+        font-size: 9px;
+        text-align: center;
+        color: var(--t3);
+        border-bottom: 2px solid var(--border);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .step.done {
+        color: var(--g);
+        border-bottom-color: var(--g);
+      }
+      .step.active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <!-- HEADER -->
+      <header>
+        <div class="logo-i">PEE</div>
+        <div class="logo-t">Parcel Equalization Engine</div>
+        <div class="badge">v0.1</div>
+        <div class="sp"></div>
+        <div class="hs">
+          <div class="dot" id="api-dot"></div>
+          API <b id="api-st">–</b>
+        </div>
+        &nbsp;
+        <div class="hs">Total <b id="hdr-a">–</b></div>
+        &nbsp;
+        <div class="hs">Lots <b id="hdr-n">–</b></div>
+      </header>
+
+      <div id="main">
+        <!-- ═══ SIDEBAR ═══ -->
+        <div id="sidebar">
+          <!-- STEP INDICATOR -->
+          <div class="sec" style="padding: 10px 14px">
+            <div class="steps">
+              <div class="step active" id="stp-1">① Draw</div>
+              <div class="step" id="stp-2">② Split</div>
+              <div class="step" id="stp-3">③ Equalize</div>
+            </div>
+
+            <!-- Draw status -->
+            <div id="draw-status">
+              <b>Click on the canvas to place polygon vertices.</b> Double-click
+              or click the first point to close.
+            </div>
+
+            <div class="brow" style="margin-top: 8px">
+              <button
+                class="btn btn-draw active"
+                id="btn-draw-tool"
+                onclick="setTool('draw')"
+              >
+                ✏ Draw polygon
+              </button>
+              <button
+                class="btn btn-g"
+                id="btn-clear-draw"
+                onclick="clearDraw()"
+                disabled
+              >
+                ✕ Clear
+              </button>
+            </div>
+          </div>
+
+          <!-- SUBDIVIDE -->
+          <div class="sec" id="sec-split">
+            <div class="sh">
+              ② Subdivide
+              <span class="sh-badge" id="split-badge">needs polygon</span>
+            </div>
+
+            <div class="fr">
+              <label>Number of lots (N)</label>
+              <div class="slid-wrap">
+                <input
+                  type="range"
+                  id="n-range"
+                  min="2"
+                  max="20"
+                  value="3"
+                  oninput="syncN(this.value)"
+                />
+                <div class="slid-val" id="n-val">3</div>
+                <input
+                  type="number"
+                  id="n-num"
+                  min="2"
+                  max="20"
+                  value="3"
+                  style="width: 52px"
+                  oninput="syncN(this.value)"
+                />
+              </div>
+            </div>
+
+            <div class="fr">
+              <label>Split direction</label>
+              <select id="split-dir">
+                <option value="auto">Auto (longest axis)</option>
+                <option value="h">Horizontal strips</option>
+                <option value="v">Vertical strips</option>
+              </select>
+            </div>
+
+            <button
+              class="btn btn-p"
+              id="btn-split"
+              onclick="doSplit()"
+              disabled
+              style="width: 100%"
+            >
+              ⚡ Split into N lots
+            </button>
+          </div>
+
+          <!-- EQUALIZE -->
+          <div class="sec">
+            <div class="sh">③ Equalize</div>
+
+            <div class="tr">
+              <label>Drag vertices &amp; edges</label>
+              <div
+                class="tog on"
+                id="tog-drag"
+                onclick="tog(this, 'dragMode')"
+              ></div>
+            </div>
+            <div class="tr">
+              <label>Auto-equalize on release</label>
+              <div
+                class="tog"
+                id="tog-live"
+                onclick="tog(this, 'liveEq')"
+              ></div>
+            </div>
+            <div class="tr">
+              <label>All interior edges movable</label>
+              <div
+                class="tog on"
+                id="tog-all"
+                onclick="tog(this, 'allMovable')"
+              ></div>
+            </div>
+
+            <div class="fr">
+              <label>API endpoint</label
+              ><input id="api-url" value="http://localhost:8000" />
+            </div>
+            <div class="fi2">
+              <div class="fr">
+                <label>Max iterations</label
+                ><input id="max-iter" type="number" value="200" />
+              </div>
+              <div class="fr">
+                <label>Tolerance</label><input id="tol" value="1e-8" />
+              </div>
+            </div>
+            <div class="fr">
+              <label>Custom target areas JSON</label>
+              <textarea
+                id="ta-json"
+                placeholder='{"0":"10%","1":"45%","2":"45%"}'
+              ></textarea>
+            </div>
+
+            <div class="brow" style="margin-bottom: 7px">
+              <button class="btn btn-p" id="btn-eq" onclick="runEq()">
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 16 16"
+                  fill="currentColor"
+                >
+                  <path d="M4 2l10 6-10 6V2z" />
+                </svg>
+                Equalize
+              </button>
+              <button class="btn btn-g" onclick="resetAll()">↺ Reset</button>
+            </div>
+          </div>
+
+          <!-- GEOMETRY TOOLS -->
+          <div class="sec">
+            <div class="sh">
+              Geometry Tools
+              <span
+                class="sh-badge"
+                style="
+                  background: transparent;
+                  color: var(--t2);
+                  border: 1px solid var(--border);
+                "
+                >Shift+Click</span
+              >
+            </div>
+            <div class="tr" style="margin-bottom: 8px">
+              <label>Show measurements (lengths/angles)</label>
+              <div
+                class="tog"
+                id="tog-meas"
+                onclick="tog(this, 'showMeas')"
+              ></div>
+            </div>
+            <div class="brow">
+              <button
+                class="btn btn-g"
+                id="btn-join"
+                onclick="joinSelected()"
+                disabled
+              >
+                🔗 Join
+              </button>
+              <button
+                class="btn btn-g"
+                id="btn-del"
+                onclick="deleteSelected()"
+                disabled
+              >
+                🗑 Delete
+              </button>
+              <button
+                class="btn btn-g"
+                id="btn-para"
+                onclick="makeParallel()"
+                disabled
+              >
+                ⏸ Parallel
+              </button>
+            </div>
+          </div>
+
+          <!-- BACKGROUND IMAGE -->
+          <div class="sec">
+            <div class="sh">Background Image</div>
+            <input
+              type="file"
+              id="bg-file"
+              accept="image/*"
+              style="display: none"
+              onchange="loadBg(this)"
+            />
+            <button
+              class="btn btn-g"
+              onclick="document.getElementById('bg-file').click()"
+              style="width: 100%; margin-bottom: 8px"
+            >
+              🖼 Load Image
+            </button>
+
+            <div id="bg-controls" style="display: none">
+              <div class="fr">
+                <label>Opacity</label
+                ><input
+                  id="bg-op"
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value="0.5"
+                  oninput="
+                    S.bg.opacity = parseFloat(this.value);
+                    draw();
+                  "
+                />
+              </div>
+
+              <div class="fr">
+                <label>Rotation (deg)</label
+                ><input
+                  id="bg-rt"
+                  type="range"
+                  min="-180"
+                  max="180"
+                  step="1"
+                  value="0"
+                  oninput="
+                    S.bg.rot = parseFloat(this.value);
+                    draw();
+                  "
+                />
+              </div>
+              <div class="fi2">
+                <div class="fr">
+                  <label>X Offset</label
+                  ><input
+                    id="bg-x"
+                    type="number"
+                    value="0"
+                    step="5"
+                    oninput="
+                      S.bg.x = parseFloat(this.value) || 0;
+                      draw();
+                    "
+                  />
+                </div>
+                <div class="fr">
+                  <label>Y Offset</label
+                  ><input
+                    id="bg-y"
+                    type="number"
+                    value="0"
+                    step="5"
+                    oninput="
+                      S.bg.y = parseFloat(this.value) || 0;
+                      draw();
+                    "
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- QUICK EXAMPLES -->
+          <div class="sec">
+            <div class="sh">Quick examples</div>
+            <div class="brow">
+              <button class="btn btn-g" onclick="loadEx('3lot')">3-lot</button>
+              <button class="btn btn-g" onclick="loadEx('5lot')">5-lot</button>
+              <button class="btn btn-g" onclick="loadEx('lshape')">
+                L-shape
+              </button>
+              <button class="btn btn-g" onclick="loadEx('fan')">Fan</button>
+            </div>
+          </div>
+
+          <!-- IMPORT / EXPORT -->
+          <div class="sec">
+            <div class="sh">Import / Export</div>
+            <div class="brow">
+              <button class="btn btn-g" onclick="openModal()">
+                📋 Paste GeoJSON
+              </button>
+              <button class="btn btn-g" onclick="exportGJ()">⬇ Export</button>
+            </div>
+          </div>
+        </div>
+        <!-- /sidebar -->
+
+        <!-- ═══ CANVAS ═══ -->
+        <div id="cv-wrap">
+          <div id="cv-bar">
+            <button class="tb" id="tool-pan" onclick="setTool('pan')">
+              ✋ Pan
+            </button>
+            <button class="tb on-p" id="tool-draw" onclick="setTool('draw')">
+              ✏ Draw
+            </button>
+            <button
+              class="tb"
+              id="tool-edit-outer"
+              onclick="setTool('edit-outer')"
+            >
+              ⬠ Edit Polygon
+            </button>
+            <button class="tb" id="tool-select" onclick="setTool('select')">
+              ⬡ Select Parcels
+            </button>
+            <button class="tb" id="tool-edit-bg" onclick="setTool('edit-bg')">
+              🖼 Edit Bg
+            </button>
+            <div style="flex: 1"></div>
+            <span style="font-size: 10px; color: var(--t3)" id="zoom-lbl"
+              >100%</span
+            >
+            <button class="tb" onclick="doZoom(1.2)">+</button>
+            <button class="tb" onclick="doZoom(0.83)">−</button>
+            <button class="tb" onclick="fitView()">Fit</button>
+          </div>
+          <div id="cv-ctr">
+            <canvas id="canvas" tabindex="1"></canvas>
+            <div class="hint" id="hint">
+              ✏ Draw your outer polygon — or load a Quick Example →
+            </div>
+            <div id="coords"></div>
+          </div>
+        </div>
+
+        <!-- ═══ RIGHT PANEL ═══ -->
+        <div id="right">
+          <div class="tabs">
+            <div class="tab on" onclick="showTab('parcels')">Parcels</div>
+            <div class="tab" onclick="showTab('stats')">Stats</div>
+            <div class="tab" onclick="showTab('log')">Log</div>
+          </div>
+          <div class="tc on" id="tab-parcels">
+            <div id="main-pc-info" style="margin-bottom: 8px"></div>
+            <div id="pc-list">
+              <p style="color: var(--t3); font-size: 11px">No parcels yet.</p>
+            </div>
+          </div>
+          <div class="tc" id="tab-stats">
+            <div class="sg">
+              <div class="sc">
+                <div class="sl">Status</div>
+                <div class="sv" id="st-ok">–</div>
+              </div>
+              <div class="sc">
+                <div class="sl">Iters</div>
+                <div class="sv a" id="st-it">–</div>
+              </div>
+              <div class="sc">
+                <div class="sl">Max Err %</div>
+                <div class="sv" id="st-er">–</div>
+              </div>
+              <div class="sc">
+                <div class="sl">Parcels</div>
+                <div class="sv a" id="st-n">–</div>
+              </div>
+            </div>
+          </div>
+          <div
+            class="tc"
+            id="tab-log"
+            style="padding: 0; flex: 1; overflow: hidden"
+          >
+            <div
+              id="log"
+              style="
+                height: 100%;
+                max-height: none;
+                border: none;
+                border-radius: 0;
+              "
+            >
+              Parcel Equalization Engine ready. Tip: ✏ Draw a polygon → ⚡ Split
+              → ⬡ drag vertices/edges → ▶ Equalize Hold Shift or Alt while
+              dragging to bypass snapping. Select a vertex and press Delete to
+              remove it.
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- /main -->
+    </div>
+    <!-- /app -->
+
+    <div id="toasts"></div>
+
+    <!-- PASTE MODAL -->
+    <div id="modal">
+      <div class="mbox">
+        <div class="mt">Paste custom GeoJSON</div>
+        <div class="fr">
+          <label
+            ><code style="color: var(--accent)">{"outer":…,"parcels":[…]}</code>
+            or FeatureCollection</label
+          >
+          <textarea
+            id="paste-in"
+            style="min-height: 190px; font-size: 10px"
+            placeholder='{"outer":{"type":"Polygon","coordinates":[…]},"parcels":[…]}'
+          ></textarea>
+        </div>
+        <div class="mf">
+          <button class="btn btn-g" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-p" onclick="importGJ()">Load</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // ══════════════════════════════════════════════════════
+      // COLOURS & EXAMPLES
+      // ══════════════════════════════════════════════════════
+      const COLORS = [
+        "#58a6ff",
+        "#3fb950",
+        "#a371f7",
+        "#f78166",
+        "#d29922",
+        "#56d364",
+        "#79c0ff",
+        "#ffa657",
+        "#f2cc60",
+        "#bc8cff",
+      ];
+
+      const EXAMPLES = {
+        "3lot": {
+          outer: {
+            type: "Polygon",
+            coordinates: [
+              [
+                [0, 0],
+                [30, 0],
+                [30, 10],
+                [0, 10],
+                [0, 0],
+              ],
+            ],
+          },
+          parcels: [
+            {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [0, 0],
+                  [8, 0],
+                  [8, 10],
+                  [0, 10],
+                  [0, 0],
+                ],
+              ],
+            },
+            {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [8, 0],
+                  [22, 0],
+                  [22, 10],
+                  [8, 10],
+                  [8, 0],
+                ],
+              ],
+            },
+            {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [22, 0],
+                  [30, 0],
+                  [30, 10],
+                  [22, 10],
+                  [22, 0],
+                ],
+              ],
+            },
+          ],
+        },
+        "5lot": {
+          outer: {
+            type: "Polygon",
+            coordinates: [
+              [
+                [0, 0],
+                [50, 0],
+                [50, 10],
+                [0, 10],
+                [0, 0],
+              ],
+            ],
+          },
+          parcels: [
+            {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [0, 0],
+                  [5, 0],
+                  [5, 10],
+                  [0, 10],
+                  [0, 0],
+                ],
+              ],
+            },
+            {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [5, 0],
+                  [20, 0],
+                  [20, 10],
+                  [5, 10],
+                  [5, 0],
+                ],
+              ],
+            },
+            {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [20, 0],
+                  [28, 0],
+                  [28, 10],
+                  [20, 10],
+                  [20, 0],
+                ],
+              ],
+            },
+            {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [28, 0],
+                  [40, 0],
+                  [40, 10],
+                  [28, 10],
+                  [28, 0],
+                ],
+              ],
+            },
+            {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [40, 0],
+                  [50, 0],
+                  [50, 10],
+                  [40, 10],
+                  [40, 0],
+                ],
+              ],
+            },
+          ],
+        },
+        lshape: {
+          outer: {
+            type: "Polygon",
+            coordinates: [
+              [
+                [0, 0],
+                [20, 0],
+                [20, 8],
+                [10, 8],
+                [10, 16],
+                [0, 16],
+                [0, 0],
+              ],
+            ],
+          },
+          parcels: [
+            {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [0, 0],
+                  [10, 0],
+                  [10, 8],
+                  [0, 8],
+                  [0, 0],
+                ],
+              ],
+            },
+            {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [10, 0],
+                  [20, 0],
+                  [20, 8],
+                  [10, 8],
+                  [10, 0],
+                ],
+              ],
+            },
+            {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [0, 8],
+                  [10, 8],
+                  [10, 16],
+                  [0, 16],
+                  [0, 8],
+                ],
+              ],
+            },
+          ],
+        },
+        fan: {
+          outer: {
+            type: "Polygon",
+            coordinates: [
+              [
+                [0, 0],
+                [16, 0],
+                [16, 10],
+                [0, 10],
+                [0, 0],
+              ],
+            ],
+          },
+          parcels: [
+            {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [0, 0],
+                  [16, 0],
+                  [8, 5],
+                  [0, 0],
+                ],
+              ],
+            },
+            {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [16, 0],
+                  [16, 10],
+                  [8, 5],
+                  [16, 0],
+                ],
+              ],
+            },
+            {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [16, 10],
+                  [0, 10],
+                  [0, 0],
+                  [8, 5],
+                  [16, 10],
+                ],
+              ],
+            },
+          ],
+        },
+      };
+
+      // ══════════════════════════════════════════════════════
+      // STATE
+      // ══════════════════════════════════════════════════════
+      const S = {
+        tool: "draw",
+        zoom: 40,
+        pan: { x: 15, y: 5 },
+        // Topology
+        topo: null,
+        outerGeo: null, // [{x,y}] — outer polygon used for split
+        // Drawing
+        drawPts: [], // [{x,y}] placed points
+        mousePt: null, // current mouse world pos
+        drawDone: false, // polygon closed
+        showMeas: false,
+        hoveredParcelId: null,
+        // Drag / Select (Independent for outer vs topo)
+        selVtxs: [], // array of {type:'topo'|'outer', id}
+        selEdges: [], // array of edge objects
+        dragVtx: null,
+        dragStartPos: null,
+        selVtxsInit: null,
+        hoverVtx: null,
+        dragEdge: null,
+        hoverEdge: null,
+        dragPan: null,
+        selParcel: null,
+        // Toggles
+        dragMode: true,
+        liveEq: false,
+        allMovable: true,
+        // Background
+        bgImage: null,
+        bg: { x: 0, y: 0, scale: 1, rot: 0, opacity: 0.5 },
+        dragBg: null,
+        dragBgStart: null,
+      };
+
+      // ══════════════════════════════════════════════════════
+      // CANVAS
+      // ══════════════════════════════════════════════════════
+      const canvas = document.getElementById("canvas");
+      const ctx = canvas.getContext("2d");
+
+      function resize() {
+        const c = document.getElementById("cv-ctr");
+        canvas.width = c.clientWidth;
+        canvas.height = c.clientHeight;
+        draw();
+      }
+      window.addEventListener("resize", resize);
+      resize();
+
+      // ══════════════════════════════════════════════════════
+      // WORLD ↔ SCREEN
+      // ══════════════════════════════════════════════════════
+      function w2s(wx, wy) {
+        return [
+          canvas.width / 2 + (wx - S.pan.x) * S.zoom,
+          canvas.height / 2 - (wy - S.pan.y) * S.zoom,
+        ];
+      }
+      function s2w(sx, sy) {
+        return [
+          (sx - canvas.width / 2) / S.zoom + S.pan.x,
+          -(sy - canvas.height / 2) / S.zoom + S.pan.y,
+        ];
+      }
+
+      // ══════════════════════════════════════════════════════
+      // MATH / GEOMETRY HELPERS
+      // ══════════════════════════════════════════════════════
+      function closestPointOnSeg(p, a, b) {
+        const dx = b.x - a.x,
+          dy = b.y - a.y;
+        const l2 = dx * dx + dy * dy;
+        if (l2 === 0) return { x: a.x, y: a.y, t: 0 };
+        let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2;
+        t = Math.max(0, Math.min(1, t));
+        return { x: a.x + t * dx, y: a.y + t * dy, t: t };
+      }
+
+      function constrainToBoundary(wx, wy) {
+        if (!S.outerGeo || S.outerGeo.length < 3) return { x: wx, y: wy };
+        let best = null,
+          minDist = Infinity;
+        for (let i = 0; i < S.outerGeo.length; i++) {
+          const a = S.outerGeo[i],
+            b = S.outerGeo[(i + 1) % S.outerGeo.length];
+          const cp = closestPointOnSeg({ x: wx, y: wy }, a, b);
+          const d = Math.hypot(wx - cp.x, wy - cp.y);
+          if (d < minDist) {
+            minDist = d;
+            best = cp;
+          }
+        }
+        return best;
+      }
+
+      function pipPoly(wx, wy, poly) {
+        let inside = false;
+        for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+          const { x: xi, y: yi } = poly[i],
+            { x: xj, y: yj } = poly[j];
+          if (
+            yi > wy !== yj > wy &&
+            wx < ((xj - xi) * (wy - yi)) / (yj - yi) + xi
+          ) {
+            inside = !inside;
+          }
+        }
+        return inside;
+      }
+
+      function sameVtx(v1, v2) {
+        if (!v1 && !v2) return true;
+        if (!v1 || !v2) return false;
+        return v1.type === v2.type && v1.id === v2.id;
+      }
+
+      function getSnapPoint(wx, wy, ignoreVtx = null) {
+        let best = null,
+          minDist = Infinity;
+
+        if (S.topo) {
+          S.topo.vertices.forEach((v, i) => {
+            if (ignoreVtx && ignoreVtx.type === "topo" && ignoreVtx.id === i)
+              return;
+            const d = Math.hypot(wx - v.x, wy - v.y);
+            if (d > 1e-4 && d < minDist) {
+              minDist = d;
+              best = { x: v.x, y: v.y };
+            }
+          });
+        }
+        if (S.outerGeo) {
+          S.outerGeo.forEach((v, i) => {
+            if (ignoreVtx && ignoreVtx.type === "outer" && ignoreVtx.id === i)
+              return;
+            const d = Math.hypot(wx - v.x, wy - v.y);
+            if (d > 1e-4 && d < minDist) {
+              minDist = d;
+              best = { x: v.x, y: v.y };
+            }
+          });
+        }
+
+        if (S.outerGeo) {
+          for (let i = 0; i < S.outerGeo.length; i++) {
+            if (
+              ignoreVtx &&
+              ignoreVtx.type === "outer" &&
+              (ignoreVtx.id === i ||
+                ignoreVtx.id === (i + 1) % S.outerGeo.length)
+            )
+              continue;
+            const a = S.outerGeo[i],
+              b = S.outerGeo[(i + 1) % S.outerGeo.length];
+            const cp = closestPointOnSeg({ x: wx, y: wy }, a, b);
+            const d = Math.hypot(wx - cp.x, wy - cp.y);
+            if (d > 1e-4 && d < minDist) {
+              minDist = d;
+              best = cp;
+            }
+          }
+        }
+        if (S.topo) {
+          S.topo.parcels.forEach((p) => {
+            for (let i = 0; i < p.vids.length; i++) {
+              const v1 = p.vids[i],
+                v2 = p.vids[(i + 1) % p.vids.length];
+              if (
+                ignoreVtx &&
+                ignoreVtx.type === "topo" &&
+                (ignoreVtx.id === v1 || ignoreVtx.id === v2)
+              )
+                continue;
+              const a = S.topo.vertices[v1],
+                b = S.topo.vertices[v2];
+              const cp = closestPointOnSeg({ x: wx, y: wy }, a, b);
+              const d = Math.hypot(wx - cp.x, wy - cp.y);
+              if (d > 1e-4 && d < minDist) {
+                minDist = d;
+                best = cp;
+              }
+            }
+          });
+        }
+        return { pt: best, dist: minDist };
+      }
+
+      function enforceInsideAndSnap(wx, wy, e, ignoreVtx = null) {
+        if (ignoreVtx && ignoreVtx.type === "outer") {
+          const disableSnap =
+            e && (e.shiftKey || e.altKey || e.ctrlKey || e.metaKey);
+          if (!disableSnap) {
+            const snap = getSnapPoint(wx, wy, ignoreVtx);
+            if (snap.pt && snap.dist < 16 / S.zoom) return snap.pt;
+          }
+          return { x: wx, y: wy };
+        }
+
+        let isInside = true,
+          cp = null;
+        if (S.outerGeo && S.outerGeo.length >= 3) {
+          isInside = pipPoly(wx, wy, S.outerGeo);
+          cp = constrainToBoundary(wx, wy);
+        }
+
+        let target = { x: wx, y: wy };
+        if (!isInside && cp) {
+          target = cp;
+        }
+
+        const disableSnap =
+          e && (e.shiftKey || e.altKey || e.ctrlKey || e.metaKey);
+        if (!disableSnap) {
+          const snap = getSnapPoint(target.x, target.y, ignoreVtx);
+          // Snap radius gets slightly larger if constrained to boundary to help catch vertices
+          if (snap.pt && snap.dist < 16 / S.zoom) return snap.pt;
+        }
+
+        return target;
+      }
+
+      // ══════════════════════════════════════════════════════
+      // HIT TEST
+      // ══════════════════════════════════════════════════════
+      function hitVtx(sx, sy) {
+        const [wx, wy] = s2w(sx, sy);
+        let best = null,
+          bestD = Infinity;
+
+        if (S.tool === "select" && S.topo) {
+          S.topo.vertices.forEach((v, i) => {
+            const [vsx, vsy] = w2s(v.x, v.y);
+            const d = Math.hypot(sx - vsx, sy - vsy);
+            if (d < 14 && d < bestD) {
+              bestD = d;
+              best = { type: "topo", id: i };
+            }
+          });
+        } else if (S.tool === "edit-outer" && S.outerGeo) {
+          S.outerGeo.forEach((v, i) => {
+            const [vsx, vsy] = w2s(v.x, v.y);
+            const d = Math.hypot(sx - vsx, sy - vsy);
+            if (d < 14 && d < bestD) {
+              bestD = d;
+              best = { type: "outer", id: i };
+            }
+          });
+        }
+        return best;
+      }
+
+      function hitEdge(sx, sy) {
+        const [wx, wy] = s2w(sx, sy);
+        let best = null,
+          bestD = Infinity;
+
+        if (S.tool === "select" && S.topo) {
+          S.topo.parcels.forEach((p) => {
+            for (let i = 0; i < p.vids.length; i++) {
+              const v1 = p.vids[i],
+                v2 = p.vids[(i + 1) % p.vids.length];
+              const A = S.topo.vertices[v1],
+                B = S.topo.vertices[v2];
+              const [Asx, Asy] = w2s(A.x, A.y);
+              const [Bsx, Bsy] = w2s(B.x, B.y);
+              const cp = closestPointOnSeg(
+                { x: sx, y: sy },
+                { x: Asx, y: Asy },
+                { x: Bsx, y: Bsy },
+              );
+              const d = Math.hypot(sx - cp.x, sy - cp.y);
+              if (d < 8 && d < bestD) {
+                bestD = d;
+                best = { type: "topo", v1, v2 };
+              }
+            }
+          });
+        } else if (S.tool === "edit-outer" && S.outerGeo) {
+          for (let i = 0; i < S.outerGeo.length; i++) {
+            const a = S.outerGeo[i],
+              b = S.outerGeo[(i + 1) % S.outerGeo.length];
+            const [Asx, Asy] = w2s(a.x, a.y);
+            const [Bsx, Bsy] = w2s(b.x, b.y);
+            const cp = closestPointOnSeg(
+              { x: sx, y: sy },
+              { x: Asx, y: Asy },
+              { x: Bsx, y: Bsy },
+            );
+            const d = Math.hypot(sx - cp.x, sy - cp.y);
+            if (d < 8 && d < bestD) {
+              bestD = d;
+              best = { type: "outer", i1: i, i2: (i + 1) % S.outerGeo.length };
+            }
+          }
+        }
+        return best;
+      }
+
+      function hitBg(sx, sy) {
+        if (S.tool !== "edit-bg" || !S.bgImage) return null;
+        const [wx, wy] = s2w(sx, sy);
+        const sw = S.bgImage.width * S.bg.scale;
+        const sh = S.bgImage.height * S.bg.scale;
+        const hw = sw / 2,
+          hh = sh / 2;
+
+        const dx = wx - S.bg.x,
+          dy = wy - S.bg.y;
+        const angle = (-S.bg.rot * Math.PI) / 180;
+        const rx = dx * Math.cos(angle) - dy * Math.sin(angle);
+        const ry = dx * Math.sin(angle) + dy * Math.cos(angle);
+
+        const r = 16 / S.zoom;
+        const corners = [
+          { id: "tl", x: -hw, y: -hh },
+          { id: "tr", x: hw, y: -hh },
+          { id: "bl", x: -hw, y: hh },
+          { id: "br", x: hw, y: hh },
+        ];
+
+        for (let c of corners) {
+          if (Math.hypot(rx - c.x, ry - c.y) < r)
+            return { type: "bg-corner", id: c.id };
+        }
+
+        if (rx >= -hw && rx <= hw && ry >= -hh && ry <= hh)
+          return { type: "bg-body" };
+        return null;
+      }
+
+      function pip(wx, wy, p) {
+        const ring = p.vids.map((i) => S.topo.vertices[i]);
+        let inside = false;
+        for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+          const { x: xi, y: yi } = ring[i],
+            { x: xj, y: yj } = ring[j];
+          if (
+            yi > wy !== yj > wy &&
+            wx < ((xj - xi) * (wy - yi)) / (yj - yi) + xi
+          )
+            inside = !inside;
+        }
+        return inside;
+      }
+
+      function lineIntersection(p1, p2, p3, p4) {
+        const d1x = p1.x - p2.x,
+          d1y = p1.y - p2.y;
+        const d2x = p3.x - p4.x,
+          d2y = p3.y - p4.y;
+        const det = d1x * d2y - d1y * d2x;
+        if (Math.abs(det) < 1e-9) return null;
+        const c1 = p1.x * p2.y - p1.y * p2.x;
+        const c2 = p3.x * p4.y - p3.y * p4.x;
+        return {
+          x: (c1 * d2x - c2 * d1x) / det,
+          y: (c1 * d2y - c2 * d1y) / det,
+        };
+      }
+
+      function getAdjVertex(vid, excludeVid) {
+        if (!S.topo) return null;
+        let best = null;
+        S.topo.parcels.forEach((p) => {
+          const n = p.vids.length;
+          for (let i = 0; i < n; i++) {
+            if (p.vids[i] === vid) {
+              const p1 = p.vids[(i + n - 1) % n];
+              const p2 = p.vids[(i + 1) % n];
+              if (p1 !== excludeVid) best = p1;
+              else if (p2 !== excludeVid) best = p2;
+            }
+          }
+        });
+        return best;
+      }
+
+      function getEdgePts(ed) {
+        if (ed.type === "topo")
+          return {
+            A: S.topo.vertices[ed.v1],
+            B: S.topo.vertices[ed.v2],
+            v1: ed.v1,
+            v2: ed.v2,
+          };
+        else
+          return {
+            A: S.outerGeo[ed.i1],
+            B: S.outerGeo[ed.i2],
+            i1: ed.i1,
+            i2: ed.i2,
+          };
+      }
+
+      function makeParallel() {
+        if (!S.selEdges || S.selEdges.length !== 2) return;
+        const ref = getEdgePts(S.selEdges[0]);
+        const tgt = getEdgePts(S.selEdges[1]);
+
+        // Reference vector
+        const rx = ref.B.x - ref.A.x,
+          ry = ref.B.y - ref.A.y;
+
+        // Target midpoint
+        const mx = (tgt.A.x + tgt.B.x) / 2,
+          my = (tgt.A.y + tgt.B.y) / 2;
+
+        // New Target infinite line passes through (mx, my) and (mx+rx, my+ry)
+        const p1 = { x: mx, y: my },
+          p2 = { x: mx + rx, y: my + ry };
+
+        if (S.selEdges[1].type === "topo") {
+          const a1 = getAdjVertex(tgt.v1, tgt.v2);
+          const a2 = getAdjVertex(tgt.v2, tgt.v1);
+
+          if (a1 !== null) {
+            const vA = S.topo.vertices[a1];
+            const inter = lineIntersection(p1, p2, tgt.A, vA);
+            if (inter) {
+              S.topo.vertices[tgt.v1].x = inter.x;
+              S.topo.vertices[tgt.v1].y = inter.y;
+            }
+          }
+          if (a2 !== null) {
+            const vB = S.topo.vertices[a2];
+            const inter = lineIntersection(p1, p2, tgt.B, vB);
+            if (inter) {
+              S.topo.vertices[tgt.v2].x = inter.x;
+              S.topo.vertices[tgt.v2].y = inter.y;
+            }
+          }
+        } else {
+          const len = S.outerGeo.length;
+          const a1 = (tgt.i1 - 1 + len) % len;
+          const a2 = (tgt.i2 + 1) % len;
+
+          const vA = S.outerGeo[a1],
+            vB = S.outerGeo[a2];
+          const inter1 = lineIntersection(p1, p2, tgt.A, vA);
+          if (inter1) {
+            S.outerGeo[tgt.i1].x = inter1.x;
+            S.outerGeo[tgt.i1].y = inter1.y;
+          }
+
+          const inter2 = lineIntersection(p1, p2, tgt.B, vB);
+          if (inter2) {
+            S.outerGeo[tgt.i2].x = inter2.x;
+            S.outerGeo[tgt.i2].y = inter2.y;
+          }
+        }
+
+        toast("Edge made parallel to reference", "ok");
+        draw();
+        updatePcList();
+        updateVtxTools();
+      }
+
+      // ══════════════════════════════════════════════════════
+      // DELETION & JOINING LOGIC
+      // ══════════════════════════════════════════════════════
+      function deleteVertices(vidsToRemove) {
+        if (!S.topo || !vidsToRemove.length) return;
+        const sorted = [...new Set(vidsToRemove)].sort((a, b) => b - a);
+        sorted.forEach((vid) => {
+          S.topo.parcels.forEach((p) => {
+            p.vids = p.vids.filter((id) => id !== vid);
+          });
+          S.topo.vertices.splice(vid, 1);
+          S.topo.parcels.forEach((p) => {
+            p.vids = p.vids.map((id) => (id > vid ? id - 1 : id));
+          });
+        });
+      }
+
+      function deleteOuterVertices(idxsToRemove) {
+        if (!S.outerGeo || !idxsToRemove.length) return;
+        const sorted = [...new Set(idxsToRemove)].sort((a, b) => b - a);
+        sorted.forEach((idx) => {
+          S.outerGeo.splice(idx, 1);
+        });
+      }
+
+      function deleteSelected() {
+        if (!S.selVtxs || !S.selVtxs.length) return;
+        const topos = S.selVtxs
+          .filter((v) => v.type === "topo")
+          .map((v) => v.id);
+        const outers = S.selVtxs
+          .filter((v) => v.type === "outer")
+          .map((v) => v.id);
+        if (topos.length) deleteVertices(topos);
+        if (outers.length) deleteOuterVertices(outers);
+        S.selVtxs = [];
+        S.hoverVtx = null;
+        toast("Deleted", "ok");
+        draw();
+        updatePcList();
+        updateVtxTools();
+      }
+
+      function joinSelected() {
+        const topos = S.selVtxs
+          .filter((v) => v.type === "topo")
+          .map((v) => v.id);
+        if (topos.length < 2) {
+          toast("Select at least 2 topology vertices", "er");
+          return;
+        }
+
+        let cx = 0,
+          cy = 0;
+        topos.forEach((id) => {
+          cx += S.topo.vertices[id].x;
+          cy += S.topo.vertices[id].y;
+        });
+        cx /= topos.length;
+        cy /= topos.length;
+
+        const targetId = topos[0];
+        S.topo.vertices[targetId].x = cx;
+        S.topo.vertices[targetId].y = cy;
+
+        const toDelete = topos.slice(1);
+        toDelete.forEach((dragId) => {
+          S.topo.parcels.forEach((p) => {
+            p.vids = p.vids.map((id) => (id === dragId ? targetId : id));
+          });
+        });
+
+        deleteVertices(toDelete);
+        S.selVtxs = [{ type: "topo", id: targetId }];
+        toast(`${topos.length} vertices joined`, "ok");
+        draw();
+        updatePcList();
+        updateVtxTools();
+      }
+
+      window.addEventListener("keydown", (e) => {
+        if (
+          e.target.tagName === "INPUT" ||
+          e.target.tagName === "TEXTAREA" ||
+          e.target.tagName === "SELECT"
+        )
+          return;
+        if (e.key === "Delete" || e.key === "Backspace") {
+          deleteSelected();
+        }
+      });
+
+      // ══════════════════════════════════════════════════════
+      // BACKGROUND IMAGE & SCALING
+      // ══════════════════════════════════════════════════════
+      function loadBg(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const img = new Image();
+          img.onload = function () {
+            S.bgImage = img;
+            S.bg = { x: 0, y: 0, scale: 1, rot: 0, opacity: 0.5 };
+            document.getElementById("bg-controls").style.display = "block";
+            document.getElementById("bg-op").value = 0.5;
+            document.getElementById("bg-rt").value = 0;
+            document.getElementById("bg-x").value = 0;
+            document.getElementById("bg-y").value = 0;
+
+            let f = 1;
+            const val = prompt(
+              "Enter image scale ratio (e.g. 1:100 or 10):",
+              "1:1",
+            );
+            if (val) {
+              if (val.includes(":")) {
+                const pts = val.split(":");
+                const a = parseFloat(pts[0]);
+                const b = parseFloat(pts[1]);
+                if (!isNaN(a) && !isNaN(b) && a > 0) f = b / a;
+              } else {
+                f = parseFloat(val);
+              }
+              if (isNaN(f) || f <= 0) f = 1;
+            }
+
+            if (S.outerGeo)
+              S.outerGeo.forEach((v) => {
+                v.x *= f;
+                v.y *= f;
+              });
+            if (S.drawPts)
+              S.drawPts.forEach((v) => {
+                v.x *= f;
+                v.y *= f;
+              });
+            if (S.topo)
+              S.topo.vertices.forEach((v) => {
+                v.x *= f;
+                v.y *= f;
+              });
+
+            S.pan.x *= f;
+            S.pan.y *= f;
+            S.zoom /= f;
+
+            if (img.width > 0 && img.height > 0) {
+              S.bg.scale = f;
+              S.bg.x = S.pan.x;
+              S.bg.y = S.pan.y;
+              document.getElementById("bg-x").value = S.bg.x.toFixed(2);
+              document.getElementById("bg-y").value = S.bg.y.toFixed(2);
+            }
+
+            draw();
+            if (S.topo) updatePcList();
+            toast("Image loaded & geometry scaled by " + f, "ok");
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function drawBg() {
+        if (!S.bgImage) return;
+        ctx.save();
+        ctx.globalAlpha = S.bg.opacity;
+        const [sx, sy] = w2s(S.bg.x, S.bg.y);
+        ctx.translate(sx, sy);
+        ctx.rotate((S.bg.rot * Math.PI) / 180);
+        const sw = S.bgImage.width * S.bg.scale * S.zoom;
+        const sh = S.bgImage.height * S.bg.scale * S.zoom;
+        ctx.drawImage(S.bgImage, -sw / 2, -sh / 2, sw, sh);
+
+        if (S.tool === "edit-bg") {
+          ctx.globalAlpha = 1;
+          ctx.strokeStyle = "#58a6ff";
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([5, 5]);
+          ctx.strokeRect(-sw / 2, -sh / 2, sw, sh);
+          ctx.setLineDash([]);
+        }
+        ctx.restore();
+      }
+
+      // ══════════════════════════════════════════════════════
+      // DRAW LOOP
+      // ══════════════════════════════════════════════════════
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawBg();
+        drawGrid();
+        if (S.outerGeo) drawOuterBoundary();
+        if (S.topo) drawTopo();
+        drawInProgress();
+        if (S.outerGeo || S.topo) drawHandles();
+        updateVtxTools();
+      }
+
+      function updateVtxTools() {
+        const bJ = document.getElementById("btn-join");
+        const bD = document.getElementById("btn-del");
+        const bP = document.getElementById("btn-para");
+        if (!bJ) return;
+        const n = S.selVtxs ? S.selVtxs.length : 0;
+        const numTopo = S.selVtxs
+          ? S.selVtxs.filter((v) => v.type === "topo").length
+          : 0;
+        bJ.disabled = numTopo < 2;
+        bD.disabled = n === 0;
+        if (bP) bP.disabled = !S.selEdges || S.selEdges.length !== 2;
+      }
+
+      function drawGrid() {
+        const step = gridStep();
+        const [wx0, wy0] = s2w(0, canvas.height);
+        const [wx1, wy1] = s2w(canvas.width, 0);
+        ctx.save();
+        ctx.strokeStyle = "#161d27";
+        ctx.lineWidth = 1;
+        for (let x = Math.floor(wx0 / step) * step; x <= wx1; x += step) {
+          const [sx] = w2s(x, 0);
+          ctx.beginPath();
+          ctx.moveTo(sx, 0);
+          ctx.lineTo(sx, canvas.height);
+          ctx.stroke();
+        }
+        for (let y = Math.floor(wy0 / step) * step; y <= wy1; y += step) {
+          const [, sy] = w2s(0, y);
+          ctx.beginPath();
+          ctx.moveTo(0, sy);
+          ctx.lineTo(canvas.width, sy);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+      function gridStep() {
+        const r = 55 / S.zoom;
+        const e = Math.pow(10, Math.floor(Math.log10(r)));
+        for (const m of [1, 2, 5, 10]) if (m * e >= r) return m * e;
+        return 10 * e;
+      }
+
+      function drawOuterBoundary() {
+        const pts = S.outerGeo;
+        if (!pts || pts.length < 3) return;
+        ctx.save();
+        ctx.beginPath();
+        const [fx, fy] = w2s(pts[0].x, pts[0].y);
+        ctx.moveTo(fx, fy);
+        for (let i = 1; i < pts.length; i++) {
+          const [sx, sy] = w2s(pts[i].x, pts[i].y);
+          ctx.lineTo(sx, sy);
+        }
+        ctx.closePath();
+        if (!S.topo) {
+          ctx.fillStyle = "#a371f710";
+          ctx.fill();
+        }
+
+        if (S.tool === "edit-outer") {
+          ctx.strokeStyle = "#d29922";
+          ctx.lineWidth = 3;
+          ctx.stroke();
+        } else {
+          ctx.strokeStyle = "#a371f7";
+          ctx.lineWidth = 2;
+          ctx.setLineDash([6, 4]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        if (S.showMeas) {
+          ctx.font = `500 ${Math.max(9, S.zoom * 0.4)}px JetBrains Mono`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          const nV = pts.length;
+
+          let signedArea = 0;
+          for (let k = 0, j = nV - 1; k < nV; j = k++) {
+            const A = pts[j],
+              B = pts[k];
+            signedArea += A.x * B.y - B.x * A.y;
+          }
+
+          let cx = 0,
+            cy = 0;
+          pts.forEach((pt) => {
+            cx += pt.x;
+            cy += pt.y;
+          });
+          cx /= nV;
+          cy /= nV;
+
+          for (let k = 0; k < nV; k++) {
+            const vA = pts[k];
+            const vB = pts[(k + 1) % nV];
+            const vC = pts[(k + 2) % nV];
+
+            const dx = vB.x - vA.x,
+              dy = vB.y - vA.y;
+            const len = Math.hypot(dx, dy);
+            const mx = vA.x + dx / 2,
+              my = vA.y + dy / 2;
+            const [smx, smy] = w2s(mx, my);
+
+            const txtLen = `${len.toFixed(2)}m`;
+            const wLen = ctx.measureText(txtLen).width;
+            ctx.fillStyle = "#0d1117cc";
+            ctx.fillRect(smx - wLen / 2 - 3, smy - 7, wLen + 6, 14);
+            ctx.fillStyle = "#a371f7";
+            ctx.fillText(txtLen, smx, smy);
+
+            const baX = vA.x - vB.x,
+              baY = vA.y - vB.y;
+            const bcX = vC.x - vB.x,
+              bcY = vC.y - vB.y;
+            const dot = baX * bcX + baY * bcY;
+            const cross = baX * bcY - baY * bcX;
+            let angle = (Math.atan2(cross, dot) * 180) / Math.PI;
+            if (angle < 0) angle += 360;
+            if (signedArea < 0) angle = 360 - angle;
+
+            const [sbx, sby] = w2s(vB.x, vB.y);
+            const vx = cx - vB.x,
+              vy = cy - vB.y;
+            const vlen = Math.hypot(vx, vy) || 1;
+            const ox = sbx + (vx / vlen) * 22;
+            const oy = sby + (vy / vlen) * 22;
+
+            const txtAng = `${Math.round(angle)}°`;
+            const wAng = ctx.measureText(txtAng).width;
+            ctx.fillStyle = "#0d1117cc";
+            ctx.fillRect(ox - wAng / 2 - 3, oy - 7, wAng + 6, 14);
+            ctx.fillStyle = "#d29922";
+            ctx.fillText(txtAng, ox, oy);
+          }
+        }
+        ctx.restore();
+      }
+
+      function drawInProgress() {
+        const pts = S.drawPts;
+        if (!pts.length) return;
+        ctx.save();
+
+        if (pts.length >= 3) {
+          ctx.beginPath();
+          const [fx, fy] = w2s(pts[0].x, pts[0].y);
+          ctx.moveTo(fx, fy);
+          for (let i = 1; i < pts.length; i++) {
+            const [sx, sy] = w2s(pts[i].x, pts[i].y);
+            ctx.lineTo(sx, sy);
+          }
+          ctx.closePath();
+          ctx.fillStyle = "#a371f712";
+          ctx.fill();
+        }
+
+        if (pts.length >= 2) {
+          ctx.beginPath();
+          const [fx, fy] = w2s(pts[0].x, pts[0].y);
+          ctx.moveTo(fx, fy);
+          for (let i = 1; i < pts.length; i++) {
+            const [sx, sy] = w2s(pts[i].x, pts[i].y);
+            ctx.lineTo(sx, sy);
+          }
+          ctx.strokeStyle = "#a371f7";
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+
+        if (S.mousePt && pts.length > 0) {
+          const last = pts[pts.length - 1];
+          const [lx, ly] = w2s(last.x, last.y);
+          const [mx, my] = w2s(S.mousePt.x, S.mousePt.y);
+          ctx.beginPath();
+          ctx.moveTo(lx, ly);
+          ctx.lineTo(mx, my);
+          ctx.strokeStyle = "#a371f780";
+          ctx.lineWidth = 1;
+          ctx.setLineDash([4, 4]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        pts.forEach((pt, i) => {
+          const [sx, sy] = w2s(pt.x, pt.y);
+          ctx.beginPath();
+          ctx.arc(sx, sy, 4, 0, Math.PI * 2);
+          const isFirst = i === 0;
+          const nearFirst =
+            isFirst && S.mousePt && pts.length >= 3 && nearStart(S.mousePt);
+          ctx.fillStyle = nearFirst
+            ? "#3fb950"
+            : isFirst
+              ? "#a371f7"
+              : "#8b6fc7";
+          ctx.fill();
+          if (nearFirst) {
+            ctx.strokeStyle = "#3fb950";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(sx, sy, 10, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+        });
+        ctx.restore();
+      }
+
+      function nearStart(mp) {
+        if (!S.drawPts.length) return false;
+        const f = S.drawPts[0];
+        const [fsx, fsy] = w2s(f.x, f.y);
+        const [msx, msy] = w2s(mp.x, mp.y);
+        return Math.hypot(msx - fsx, msy - fsy) < 16;
+      }
+
+      function drawTopo() {
+        S.topo.parcels.forEach((p, i) => {
+          const ta = targetArea(i);
+          const a = pArea(p);
+          const ep = ta > 0 ? ((a - ta) / ta) * 100 : 0;
+          const sel = S.selParcel === i;
+
+          ctx.save();
+          ctx.beginPath();
+          const v0 = S.topo.vertices[p.vids[0]];
+          const [fx, fy] = w2s(v0.x, v0.y);
+          ctx.moveTo(fx, fy);
+          for (let k = 1; k < p.vids.length; k++) {
+            const v = S.topo.vertices[p.vids[k]];
+            const [sx, sy] = w2s(v.x, v.y);
+            ctx.lineTo(sx, sy);
+          }
+          ctx.closePath();
+
+          ctx.globalAlpha = sel ? 0.28 : 0.14;
+          ctx.fillStyle = p.color;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+
+          const sc =
+            Math.abs(ep) < 0.1
+              ? "#3fb950"
+              : Math.abs(ep) < 1
+                ? p.color
+                : "#f78166";
+          ctx.strokeStyle = sel ? p.color : sc;
+          ctx.lineWidth = sel ? 2.5 : 1.8;
+          ctx.stroke();
+          ctx.restore();
+
+          drawLbl(p, a, ta);
+
+          if (S.showMeas || S.hoveredParcelId === i) {
+            ctx.save();
+            ctx.font = `500 ${Math.max(9, S.zoom * 0.4)}px JetBrains Mono`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            const nV = p.vids.length;
+
+            let signedArea = 0;
+            for (let k = 0, j = nV - 1; k < nV; j = k++) {
+              const A = S.topo.vertices[p.vids[j]],
+                B = S.topo.vertices[p.vids[k]];
+              signedArea += A.x * B.y - B.x * A.y;
+            }
+
+            let cx = 0,
+              cy = 0;
+            p.vids.forEach((vi) => {
+              cx += S.topo.vertices[vi].x;
+              cy += S.topo.vertices[vi].y;
+            });
+            cx /= nV;
+            cy /= nV;
+
+            for (let k = 0; k < nV; k++) {
+              const vA = S.topo.vertices[p.vids[k]];
+              const vB = S.topo.vertices[p.vids[(k + 1) % nV]];
+              const vC = S.topo.vertices[p.vids[(k + 2) % nV]];
+
+              const dx = vB.x - vA.x,
+                dy = vB.y - vA.y;
+              const len = Math.hypot(dx, dy);
+              const mx = vA.x + dx / 2,
+                my = vA.y + dy / 2;
+              const [smx, smy] = w2s(mx, my);
+
+              const txtLen = `${len.toFixed(2)}m`;
+              const wLen = ctx.measureText(txtLen).width;
+              ctx.fillStyle = "#0d1117cc";
+              ctx.fillRect(smx - wLen / 2 - 3, smy - 7, wLen + 6, 14);
+              ctx.fillStyle = "#58a6ff";
+              ctx.fillText(txtLen, smx, smy);
+
+              const baX = vA.x - vB.x,
+                baY = vA.y - vB.y;
+              const bcX = vC.x - vB.x,
+                bcY = vC.y - vB.y;
+              const dot = baX * bcX + baY * bcY;
+              const cross = baX * bcY - baY * bcX;
+              let angle = (Math.atan2(cross, dot) * 180) / Math.PI;
+              if (angle < 0) angle += 360;
+              if (signedArea < 0) angle = 360 - angle;
+
+              const [sbx, sby] = w2s(vB.x, vB.y);
+              const vx = cx - vB.x,
+                vy = cy - vB.y;
+              const vlen = Math.hypot(vx, vy) || 1;
+              const ox = sbx + (vx / vlen) * 22;
+              const oy = sby + (vy / vlen) * 22;
+
+              const txtAng = `${Math.round(angle)}°`;
+              const wAng = ctx.measureText(txtAng).width;
+              ctx.fillStyle = "#0d1117cc";
+              ctx.fillRect(ox - wAng / 2 - 3, oy - 7, wAng + 6, 14);
+              ctx.fillStyle = "#d29922";
+              ctx.fillText(txtAng, ox, oy);
+            }
+            ctx.restore();
+          }
+        });
+      }
+
+      function drawLbl(p, a, ta) {
+        let cx = 0,
+          cy = 0;
+        const n = p.vids.length;
+        p.vids.forEach((i) => {
+          cx += S.topo.vertices[i].x;
+          cy += S.topo.vertices[i].y;
+        });
+        cx /= n;
+        cy /= n;
+        const [sx, sy] = w2s(cx, cy);
+        const fs = Math.max(9, Math.min(13, S.zoom * 1.6));
+        ctx.save();
+        ctx.font = `500 ${fs}px Inter`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const ep = ta > 0 ? ((a - ta) / ta) * 100 : 0;
+        const lines = [
+          p.label,
+          `${a.toFixed(1)} m²`,
+          ep >= 0 ? `+${ep.toFixed(1)}%` : `${ep.toFixed(1)}%`,
+        ];
+        const lh = fs + 3;
+        const totH = lines.length * lh;
+        lines.forEach((txt, i) => {
+          const y = sy - totH / 2 + i * lh + lh / 2;
+          const w = ctx.measureText(txt).width;
+          ctx.globalAlpha = 0.8;
+          ctx.fillStyle = "#0d1117";
+          ctx.fillRect(sx - w / 2 - 3, y - lh / 2, w + 6, lh);
+          ctx.globalAlpha = 1;
+          const col =
+            i === 2
+              ? Math.abs(ep) < 0.1
+                ? "#3fb950"
+                : Math.abs(ep) < 1
+                  ? "#d29922"
+                  : "#f78166"
+              : p.color;
+          ctx.fillStyle = col;
+          ctx.fillText(txt, sx, y);
+        });
+        ctx.restore();
+      }
+
+      function drawHandles() {
+        if (S.tool !== "select" && S.tool !== "edit-outer") return;
+
+        if (S.selEdges && S.selEdges.length > 0) {
+          S.selEdges.forEach((ed) => {
+            let A, B;
+            if (ed.type === "topo") {
+              A = S.topo.vertices[ed.v1];
+              B = S.topo.vertices[ed.v2];
+            } else {
+              A = S.outerGeo[ed.i1];
+              B = S.outerGeo[ed.i2];
+            }
+            const [Asx, Asy] = w2s(A.x, A.y);
+            const [Bsx, Bsy] = w2s(B.x, B.y);
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(Asx, Asy);
+            ctx.lineTo(Bsx, Bsy);
+            ctx.strokeStyle = "#f78166";
+            ctx.lineWidth = 4;
+            ctx.stroke();
+            ctx.restore();
+          });
+        }
+
+        if (S.hoverEdge && !S.dragVtx && !S.dragEdge) {
+          let A, B;
+          if (S.hoverEdge.type === "topo") {
+            A = S.topo.vertices[S.hoverEdge.v1];
+            B = S.topo.vertices[S.hoverEdge.v2];
+          } else {
+            A = S.outerGeo[S.hoverEdge.i1];
+            B = S.outerGeo[S.hoverEdge.i2];
+          }
+          const [Asx, Asy] = w2s(A.x, A.y);
+          const [Bsx, Bsy] = w2s(B.x, B.y);
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(Asx, Asy);
+          ctx.lineTo(Bsx, Bsy);
+          ctx.strokeStyle = "#58a6ff60";
+          ctx.lineWidth = 4;
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        if (S.dragEdge) {
+          let A, B;
+          if (S.dragEdge.type === "topo") {
+            A = S.topo.vertices[S.dragEdge.v1];
+            B = S.topo.vertices[S.dragEdge.v2];
+          } else {
+            A = S.outerGeo[S.dragEdge.i1];
+            B = S.outerGeo[S.dragEdge.i2];
+          }
+          const [Asx, Asy] = w2s(A.x, A.y);
+          const [Bsx, Bsy] = w2s(B.x, B.y);
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(Asx, Asy);
+          ctx.lineTo(Bsx, Bsy);
+          ctx.strokeStyle = "#58a6ff";
+          ctx.lineWidth = 3;
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        if (S.tool === "edit-outer" && S.outerGeo) {
+          S.outerGeo.forEach((v, idx) => {
+            const [sx, sy] = w2s(v.x, v.y);
+            const isHover =
+              S.hoverVtx &&
+              S.hoverVtx.type === "outer" &&
+              S.hoverVtx.id === idx;
+            const isSel =
+              S.selVtxs &&
+              S.selVtxs.some((s) => s.type === "outer" && s.id === idx);
+            const isDrag = isSel && S.dragVtx;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(
+              sx,
+              sy,
+              isDrag || isSel ? 7 : isHover ? 6 : 4,
+              0,
+              Math.PI * 2,
+            );
+            ctx.fillStyle = "#30363d";
+            ctx.strokeStyle = "#d29922";
+            ctx.lineWidth = 1.5;
+            if (isSel) {
+              ctx.fillStyle = "#fff";
+              ctx.strokeStyle = "#f78166";
+              ctx.lineWidth = 2;
+            } else if (isHover) {
+              ctx.fillStyle = "#fff";
+              ctx.strokeStyle = "#d29922";
+              ctx.lineWidth = 2;
+            }
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+          });
+        }
+
+        if (S.tool === "select" && S.topo) {
+          S.topo.vertices.forEach((v, idx) => {
+            const [sx, sy] = w2s(v.x, v.y);
+            const isHover =
+              S.hoverVtx && S.hoverVtx.type === "topo" && S.hoverVtx.id === idx;
+            const isSel =
+              S.selVtxs &&
+              S.selVtxs.some((s) => s.type === "topo" && s.id === idx);
+            const isDrag = isSel && S.dragVtx;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(
+              sx,
+              sy,
+              isDrag || isSel ? 7 : isHover ? 6 : 4,
+              0,
+              Math.PI * 2,
+            );
+            ctx.fillStyle = "#30363d";
+            ctx.strokeStyle = "#a371f7";
+            ctx.lineWidth = 1.5;
+            if (isSel) {
+              ctx.fillStyle = "#fff";
+              ctx.strokeStyle = "#f78166";
+              ctx.lineWidth = 2;
+            } else if (isHover) {
+              ctx.fillStyle = "#fff";
+              ctx.strokeStyle = "#a371f7";
+              ctx.lineWidth = 2;
+            }
+            ctx.fill();
+            ctx.stroke();
+            if (isDrag) {
+              ctx.strokeStyle = "#f7816640";
+              ctx.lineWidth = 1;
+              ctx.setLineDash([3, 4]);
+              ctx.beginPath();
+              ctx.moveTo(sx, 0);
+              ctx.lineTo(sx, canvas.height);
+              ctx.stroke();
+              ctx.beginPath();
+              ctx.moveTo(0, sy);
+              ctx.lineTo(canvas.width, sy);
+              ctx.stroke();
+              ctx.setLineDash([]);
+            }
+            ctx.restore();
+          });
+        }
+      }
+
+      // ══════════════════════════════════════════════════════
+      // TOPOLOGY (client-side)
+      // ══════════════════════════════════════════════════════
+      function buildTopo(geo) {
+        const PREC = 1e7;
+        const vmap = new Map();
+        const vertices = [];
+        const parcels = [];
+        let outer = [];
+
+        function vid(x, y) {
+          const k = `${Math.round(x * PREC) / PREC},${Math.round(y * PREC) / PREC}`;
+          if (!vmap.has(k)) {
+            vmap.set(k, vertices.length);
+            vertices.push({ x, y });
+          }
+          return vmap.get(k);
+        }
+
+        let rings = [];
+        if (geo.type === "FeatureCollection") {
+          const of = geo.features.find((f) => f.properties?.role === "outer");
+          if (of)
+            outer = of.geometry.coordinates[0]
+              .slice(0, -1)
+              .map(([x, y]) => ({ x, y }));
+          rings = geo.features
+            .filter((f) => f.properties?.role !== "outer")
+            .map((f) => f.geometry.coordinates[0]);
+        } else {
+          outer = geo.outer.coordinates[0]
+            .slice(0, -1)
+            .map(([x, y]) => ({ x, y }));
+          rings = geo.parcels.map((p) => p.coordinates[0]);
+        }
+
+        rings.forEach((ring, i) => {
+          const pts = ring.slice(0, -1);
+          const vids = pts.map(([x, y]) => vid(x, y));
+          parcels.push({
+            vids,
+            color: COLORS[i % COLORS.length],
+            label: `Lot ${i}`,
+          });
+        });
+
+        return { vertices, parcels, outer };
+      }
+
+      function pArea(p) {
+        const n = p.vids.length;
+        let a = 0;
+        for (let i = 0, j = n - 1; i < n; j = i++) {
+          const A = S.topo.vertices[p.vids[j]],
+            B = S.topo.vertices[p.vids[i]];
+          a += (A.x + B.x) * (A.y - B.y);
+        }
+        return Math.abs(a / 2);
+      }
+      function polyArea(pts) {
+        let a = 0;
+        for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+          a += (pts[j].x + pts[i].x) * (pts[j].y - pts[i].y);
+        }
+        return Math.abs(a / 2);
+      }
+      function totalArea() {
+        if (!S.topo) return 0;
+        return S.topo.parcels.reduce((s, p) => s + pArea(p), 0);
+      }
+      function getTargetAreas() {
+        if (!S.topo) return null;
+        const taRaw = document.getElementById("ta-json").value.trim();
+        if (!taRaw) return null;
+        try {
+          const parsed = JSON.parse(taRaw);
+          const tot = totalArea();
+          const ta = {};
+          for (let k in parsed) {
+            let val = parsed[k];
+            if (typeof val === "string" && val.endsWith("%")) {
+              val = (parseFloat(val.replace("%", "")) / 100) * tot;
+            }
+            ta[k] = parseFloat(val);
+          }
+          return ta;
+        } catch {
+          return null;
+        }
+      }
+      function targetArea(i) {
+        if (!S.topo) return 0;
+        const tas = getTargetAreas();
+        if (tas && tas[i] !== undefined && !isNaN(tas[i])) return tas[i];
+        return totalArea() / S.topo.parcels.length;
+      }
+
+      // ══════════════════════════════════════════════════════
+      // POLYGON CLIPPING (Sutherland-Hodgman)
+      // ══════════════════════════════════════════════════════
+      function clipHP(poly, a, b, c) {
+        if (!poly.length) return [];
+        const out = [];
+        const ins = (v) => a * v.x + b * v.y <= c + 1e-9;
+        for (let i = 0; i < poly.length; i++) {
+          const curr = poly[i],
+            next = poly[(i + 1) % poly.length];
+          const ci = ins(curr),
+            cn = ins(next);
+          if (ci) out.push(curr);
+          if (ci !== cn) {
+            const dc = a * curr.x + b * curr.y - c,
+              dn = a * next.x + b * next.y - c;
+            const t = dc / (dc - dn);
+            out.push({
+              x: curr.x + t * (next.x - curr.x),
+              y: curr.y + t * (next.y - curr.y),
+            });
+          }
+        }
+        return out;
+      }
+      function splitPolyH(poly, n) {
+        const ys = poly.map((v) => v.y);
+        const yMin = Math.min(...ys),
+          yMax = Math.max(...ys);
+        const step = (yMax - yMin) / n;
+        const parts = [];
+        for (let i = 0; i < n; i++) {
+          const yLo = yMin + i * step,
+            yHi = i === n - 1 ? yMax + 1e-9 : yMin + (i + 1) * step;
+          let p = clipHP(poly, 0, 1, yHi);
+          p = clipHP(p, 0, -1, -yLo);
+          if (p.length >= 3) parts.push(p);
+        }
+        return parts;
+      }
+      function splitPolyV(poly, n) {
+        const xs = poly.map((v) => v.x);
+        const xMin = Math.min(...xs),
+          xMax = Math.max(...xs);
+        const step = (xMax - xMin) / n;
+        const parts = [];
+        for (let i = 0; i < n; i++) {
+          const xLo = xMin + i * step,
+            xHi = i === n - 1 ? xMax + 1e-9 : xMin + (i + 1) * step;
+          let p = clipHP(poly, 1, 0, xHi);
+          p = clipHP(p, -1, 0, -xLo);
+          if (p.length >= 3) parts.push(p);
+        }
+        return parts;
+      }
+      function splitPolyAuto(poly, n) {
+        const xs = poly.map((v) => v.x),
+          ys = poly.map((v) => v.y);
+        const W = Math.max(...xs) - Math.min(...xs);
+        const H = Math.max(...ys) - Math.min(...ys);
+        return W >= H ? splitPolyV(poly, n) : splitPolyH(poly, n);
+      }
+
+      // ══════════════════════════════════════════════════════
+      // SPLIT ACTION
+      // ══════════════════════════════════════════════════════
+      function doSplit() {
+        const outer = S.outerGeo;
+        if (!outer || outer.length < 3) {
+          toast("Draw or load a polygon first", "er");
+          return;
+        }
+        const n = parseInt(document.getElementById("n-range").value) || 3;
+        const dir = document.getElementById("split-dir").value;
+
+        let parts;
+        if (dir === "h") parts = splitPolyH(outer, n);
+        else if (dir === "v") parts = splitPolyV(outer, n);
+        else parts = splitPolyAuto(outer, n);
+
+        if (!parts.length) {
+          toast("Split produced no valid parcels", "er");
+          return;
+        }
+
+        const outerRing = outer.map((v) => [v.x, v.y]);
+        outerRing.push(outerRing[0]);
+        const geo = {
+          outer: { type: "Polygon", coordinates: [outerRing] },
+          parcels: parts.map((pts) => {
+            const ring = pts.map((v) => [v.x, v.y]);
+            ring.push(ring[0]);
+            return { type: "Polygon", coordinates: [ring] };
+          }),
+        };
+
+        S.topo = buildTopo(geo);
+        S.selParcel = null;
+        S.selVtxs = [];
+        setStep(3);
+        document.getElementById("hint").style.opacity = "0";
+        logA(
+          `Split into ${n} lots (${dir}), areas: ${S.topo.parcels.map((p) => pArea(p).toFixed(1)).join(", ")}`,
+        );
+        toast(`${n} lots created — drag vertices or click Equalize`, "ok");
+        fitView();
+      }
+
+      // ══════════════════════════════════════════════════════
+      // MOUSE EVENTS
+      // ══════════════════════════════════════════════════════
+      canvas.addEventListener("mousemove", (e) => {
+        const r = canvas.getBoundingClientRect();
+        const sx = e.clientX - r.left,
+          sy = e.clientY - r.top;
+        const [wx, wy] = s2w(sx, sy);
+        S.mousePt = { x: wx, y: wy };
+        document.getElementById("coords").textContent =
+          `${wx.toFixed(2)}, ${wy.toFixed(2)}`;
+
+        // Dragging selected vertices
+        if (S.dragVtx && S.selVtxsInit) {
+          // Calculate the target position of the primarily dragged vertex
+          const primaryInit = S.selVtxsInit.find(
+            (v) => v.type === S.dragVtx.type && v.id === S.dragVtx.id,
+          );
+          let targetPos = enforceInsideAndSnap(wx, wy, e, S.dragVtx);
+
+          if (e.altKey && S.selEdges && S.selEdges.length === 1) {
+            const ed = S.selEdges[0];
+            let A, B;
+            if (ed.type === "topo") {
+              A = S.topo.vertices[ed.v1];
+              B = S.topo.vertices[ed.v2];
+            } else {
+              A = S.outerGeo[ed.i1];
+              B = S.outerGeo[ed.i2];
+            }
+            const dx = B.x - A.x,
+              dy = B.y - A.y;
+            const l2 = dx * dx + dy * dy;
+            if (l2 > 0) {
+              const t = ((wx - A.x) * dx + (wy - A.y) * dy) / l2;
+              targetPos = { x: A.x + t * dx, y: A.y + t * dy };
+            }
+          }
+
+          const dx = targetPos.x - primaryInit.ox;
+          const dy = targetPos.y - primaryInit.oy;
+
+          // Apply translation to all selected vertices
+          S.selVtxsInit.forEach((sv) => {
+            if (sv.type === "topo" && S.topo) {
+              S.topo.vertices[sv.id].x = sv.ox + dx;
+              S.topo.vertices[sv.id].y = sv.oy + dy;
+            } else if (sv.type === "outer" && S.outerGeo) {
+              S.outerGeo[sv.id].x = sv.ox + dx;
+              S.outerGeo[sv.id].y = sv.oy + dy;
+            }
+          });
+
+          draw();
+          updatePcList();
+          return;
+        }
+
+        // Dragging edge
+        if (S.dragEdge) {
+          const { mx, my } = S.dragEdge;
+          const dx = wx - mx,
+            dy = wy - my;
+
+          if (S.dragEdge.type === "topo") {
+            const { v1, v2, ov1, ov2 } = S.dragEdge;
+            const ex = ov2.x - ov1.x,
+              ey = ov2.y - ov1.y;
+            const len = Math.hypot(ex, ey);
+            if (len > 1e-6) {
+              const nx = -ey / len,
+                ny = ex / len;
+              const dist = dx * nx + dy * ny;
+              const P0_1 = { x: ov1.x + nx * dist, y: ov1.y + ny * dist };
+              const P0_2 = { x: ov2.x + nx * dist, y: ov2.y + ny * dist };
+              const pos1 = enforceInsideAndSnap(P0_1.x, P0_1.y, e, {
+                type: "topo",
+                id: v1,
+              });
+              const pos2 = enforceInsideAndSnap(P0_2.x, P0_2.y, e, {
+                type: "topo",
+                id: v2,
+              });
+              S.topo.vertices[v1].x = pos1.x;
+              S.topo.vertices[v1].y = pos1.y;
+              S.topo.vertices[v2].x = pos2.x;
+              S.topo.vertices[v2].y = pos2.y;
+            }
+          } else if (S.dragEdge.type === "outer") {
+            const { i1, i2, ov1, ov2 } = S.dragEdge;
+            const ex = ov2.x - ov1.x,
+              ey = ov2.y - ov1.y;
+            const len = Math.hypot(ex, ey);
+            if (len > 1e-6) {
+              const nx = -ey / len,
+                ny = ex / len;
+              const dist = dx * nx + dy * ny;
+              const P0_1 = { x: ov1.x + nx * dist, y: ov1.y + ny * dist };
+              const P0_2 = { x: ov2.x + nx * dist, y: ov2.y + ny * dist };
+              const pos1 = enforceInsideAndSnap(P0_1.x, P0_1.y, e, {
+                type: "outer",
+                id: i1,
+              });
+              const pos2 = enforceInsideAndSnap(P0_2.x, P0_2.y, e, {
+                type: "outer",
+                id: i2,
+              });
+              S.outerGeo[i1].x = pos1.x;
+              S.outerGeo[i1].y = pos1.y;
+              S.outerGeo[i2].x = pos2.x;
+              S.outerGeo[i2].y = pos2.y;
+            }
+          }
+          draw();
+          updatePcList();
+          return;
+        }
+
+        // Dragging Background
+        if (S.dragBg) {
+          const dx = wx - S.dragBgStart.wx;
+          const dy = wy - S.dragBgStart.wy;
+          const o = S.dragBgStart.bgo;
+
+          if (S.dragBg.type === "bg-body") {
+            S.bg.x = o.x + dx;
+            S.bg.y = o.y + dy;
+            document.getElementById("bg-x").value = S.bg.x.toFixed(2);
+            document.getElementById("bg-y").value = S.bg.y.toFixed(2);
+          }
+          draw();
+          return;
+        }
+
+        // Panning
+        if (S.dragPan) {
+          S.pan.x = S.dragPan.px - (e.clientX - S.dragPan.sx) / S.zoom;
+          S.pan.y = S.dragPan.py + (e.clientY - S.dragPan.sy) / S.zoom;
+          draw();
+          return;
+        }
+
+        // Hover
+        if (S.tool === "edit-bg") {
+          const hit = hitBg(sx, sy);
+          if (hit) {
+            if (hit.type === "bg-corner")
+              canvas.style.cursor =
+                hit.id === "tl" || hit.id === "br"
+                  ? "nwse-resize"
+                  : "nesw-resize";
+            else canvas.style.cursor = "move";
+          } else {
+            canvas.style.cursor = "default";
+          }
+          return;
+        }
+
+        const prevVtx = S.hoverVtx,
+          prevE = S.hoverEdge;
+        S.hoverVtx = null;
+        S.hoverEdge = null;
+        if (S.dragMode && (S.tool === "select" || S.tool === "edit-outer")) {
+          S.hoverVtx = hitVtx(sx, sy);
+          if (!S.hoverVtx) S.hoverEdge = hitEdge(sx, sy);
+        }
+
+        canvas.style.cursor =
+          S.hoverVtx || S.hoverEdge
+            ? "grab"
+            : S.tool === "draw"
+              ? "crosshair"
+              : "default";
+
+        const edgeStr = S.hoverEdge
+          ? S.hoverEdge.type === "topo"
+            ? `${S.hoverEdge.v1},${S.hoverEdge.v2}`
+            : `o${S.hoverEdge.i1},o${S.hoverEdge.i2}`
+          : "";
+        const prevEdgeStr = prevE
+          ? prevE.type === "topo"
+            ? `${prevE.v1},${prevE.v2}`
+            : `o${prevE.i1},o${prevE.i2}`
+          : "";
+        if (!sameVtx(S.hoverVtx, prevVtx) || edgeStr !== prevEdgeStr) draw();
+        else if (S.tool === "draw") draw();
+      });
+
+      canvas.addEventListener("mousedown", (e) => {
+        const r = canvas.getBoundingClientRect();
+        const sx = e.clientX - r.left,
+          sy = e.clientY - r.top;
+        const [wx, wy] = s2w(sx, sy);
+
+        if (S.tool === "draw") {
+          return;
+        }
+
+        if (S.tool === "edit-bg") {
+          const hit = hitBg(sx, sy);
+          if (hit) {
+            S.dragBg = hit;
+            S.dragBgStart = { wx, wy, bgo: { ...S.bg } };
+            canvas.style.cursor = "grabbing";
+            return;
+          }
+        }
+
+        if (S.dragMode && (S.tool === "select" || S.tool === "edit-outer")) {
+          const vtx = hitVtx(sx, sy);
+          if (vtx) {
+            if (e.shiftKey || e.ctrlKey || e.metaKey) {
+              // Toggle selection
+              const existingIdx = S.selVtxs.findIndex(
+                (v) => v.type === vtx.type && v.id === vtx.id,
+              );
+              if (existingIdx >= 0) S.selVtxs.splice(existingIdx, 1);
+              else S.selVtxs.push(vtx);
+            } else {
+              // Replace selection if clicking unselected vertex
+              if (
+                !S.selVtxs.some((v) => v.type === vtx.type && v.id === vtx.id)
+              ) {
+                S.selVtxs = [vtx];
+              }
+            }
+
+            if (S.selVtxs.some((v) => v.type === vtx.type && v.id === vtx.id)) {
+              S.dragVtx = vtx;
+              S.dragStartPos = { wx, wy };
+              S.selVtxsInit = S.selVtxs.map((sv) => {
+                if (sv.type === "topo")
+                  return {
+                    ...sv,
+                    ox: S.topo.vertices[sv.id].x,
+                    oy: S.topo.vertices[sv.id].y,
+                  };
+                else
+                  return {
+                    ...sv,
+                    ox: S.outerGeo[sv.id].x,
+                    oy: S.outerGeo[sv.id].y,
+                  };
+              });
+              canvas.style.cursor = "grabbing";
+            } else {
+              S.dragVtx = null;
+              S.selVtxsInit = null;
+            }
+            draw();
+            return;
+          }
+
+          // Clear selection if clicked empty space
+          if (!hitEdge(sx, sy)) {
+            S.selVtxs = [];
+            S.selEdges = [];
+            draw();
+            updateVtxTools();
+          }
+
+          const edge = hitEdge(sx, sy);
+          if (edge) {
+            if (e.shiftKey || e.ctrlKey || e.metaKey) {
+              const idx = S.selEdges.findIndex(
+                (ed) =>
+                  ed.type === edge.type &&
+                  (ed.type === "topo"
+                    ? ed.v1 === edge.v1 && ed.v2 === edge.v2
+                    : ed.i1 === edge.i1 && ed.i2 === edge.i2),
+              );
+              if (idx >= 0) S.selEdges.splice(idx, 1);
+              else S.selEdges.push(edge);
+              draw();
+              updateVtxTools();
+              return;
+            }
+
+            if (
+              !S.selEdges.some(
+                (ed) =>
+                  ed.type === edge.type &&
+                  (ed.type === "topo"
+                    ? ed.v1 === edge.v1 && ed.v2 === edge.v2
+                    : ed.i1 === edge.i1 && ed.i2 === edge.i2),
+              )
+            ) {
+              S.selEdges = [edge];
+              updateVtxTools();
+            }
+
+            if (edge.type === "topo") {
+              const [v1, v2] = [edge.v1, edge.v2];
+              S.dragEdge = {
+                type: "topo",
+                v1,
+                v2,
+                ov1: { x: S.topo.vertices[v1].x, y: S.topo.vertices[v1].y },
+                ov2: { x: S.topo.vertices[v2].x, y: S.topo.vertices[v2].y },
+                mx: wx,
+                my: wy,
+              };
+            } else if (edge.type === "outer") {
+              const [i1, i2] = [edge.i1, edge.i2];
+              S.dragEdge = {
+                type: "outer",
+                i1,
+                i2,
+                ov1: { x: S.outerGeo[i1].x, y: S.outerGeo[i1].y },
+                ov2: { x: S.outerGeo[i2].x, y: S.outerGeo[i2].y },
+                mx: wx,
+                my: wy,
+              };
+            }
+            S.selVtxs = []; // clear vertex selection when dragging edge
+            canvas.style.cursor = "grabbing";
+            draw();
+            return;
+          }
+        }
+        S.dragPan = { sx: e.clientX, sy: e.clientY, px: S.pan.x, py: S.pan.y };
+        canvas.style.cursor = "grabbing";
+      });
+
+      canvas.addEventListener("mouseup", async (e) => {
+        const wasVtx = S.dragVtx !== null,
+          wasEdge = S.dragEdge !== null;
+        S.dragVtx = null;
+        S.dragPan = null;
+        S.dragEdge = null;
+        S.selVtxsInit = null;
+        S.dragBg = null;
+        canvas.style.cursor = "default";
+        draw();
+        if ((wasVtx || wasEdge) && S.liveEq) await runEq();
+      });
+
+      let lastClick = 0;
+      canvas.addEventListener("click", (e) => {
+        const r = canvas.getBoundingClientRect();
+        const sx = e.clientX - r.left,
+          sy = e.clientY - r.top;
+        const [wx, wy] = s2w(sx, sy);
+        const now = Date.now();
+        const dbl = now - lastClick < 350;
+        lastClick = now;
+
+        if (S.tool === "draw") {
+          if (dbl && S.drawPts.length >= 3) {
+            closeDraw();
+            return;
+          }
+          if (S.drawPts.length >= 3 && nearStart({ x: wx, y: wy })) {
+            closeDraw();
+            return;
+          }
+          S.drawPts.push({ x: wx, y: wy });
+          updateDrawStatus();
+          draw();
+          return;
+        }
+
+        if (
+          (S.tool === "select" || S.tool === "edit-outer") &&
+          !S.dragVtx &&
+          !S.dragEdge
+        ) {
+          if (dbl) {
+            const edge = hitEdge(sx, sy);
+            if (edge) {
+              if (edge.type === "topo") {
+                const { v1, v2 } = edge;
+                const cp = closestPointOnSeg(
+                  { x: wx, y: wy },
+                  S.topo.vertices[v1],
+                  S.topo.vertices[v2],
+                );
+                const newV = enforceInsideAndSnap(cp.x, cp.y, e);
+                const newVid = S.topo.vertices.length;
+                S.topo.vertices.push(newV);
+                S.topo.parcels.forEach((p) => {
+                  for (let i = 0; i < p.vids.length; i++) {
+                    const a = p.vids[i],
+                      b = p.vids[(i + 1) % p.vids.length];
+                    if ((a === v1 && b === v2) || (a === v2 && b === v1)) {
+                      p.vids.splice(i + 1, 0, newVid);
+                      break;
+                    }
+                  }
+                });
+                toast("Vertex added", "ok");
+                draw();
+                updatePcList();
+                return;
+              } else if (edge.type === "outer") {
+                const { i1, i2 } = edge;
+                const cp = closestPointOnSeg(
+                  { x: wx, y: wy },
+                  S.outerGeo[i1],
+                  S.outerGeo[i2],
+                );
+                const insertIdx = i2 === 0 ? S.outerGeo.length : i2;
+                S.outerGeo.splice(insertIdx, 0, { x: cp.x, y: cp.y });
+                toast("Outer vertex added", "ok");
+                draw();
+                return;
+              }
+            }
+          }
+          if (S.tool === "select" && !hitVtx(sx, sy)) {
+            S.topo?.parcels.forEach((p, i) => {
+              if (pip(wx, wy, p)) {
+                S.selParcel = i;
+                draw();
+                hiPc(i);
+              }
+            });
+          }
+        }
+      });
+
+      canvas.addEventListener(
+        "wheel",
+        (e) => {
+          e.preventDefault();
+          doZoom(e.deltaY < 0 ? 1.12 : 0.89);
+        },
+        { passive: false },
+      );
+
+      // ══════════════════════════════════════════════════════
+      // DRAWING HELPERS
+      // ══════════════════════════════════════════════════════
+      function closeDraw() {
+        if (S.drawPts.length < 3) {
+          toast("Need at least 3 points", "er");
+          return;
+        }
+        S.outerGeo = [...S.drawPts];
+        S.drawPts = [];
+        S.drawDone = true;
+        document.getElementById("btn-split").disabled = false;
+        document.getElementById("split-badge").textContent = "ready ✓";
+        document.getElementById("split-badge").style.background = "var(--g)";
+        updateDrawStatus();
+        setStep(2);
+        logA(
+          `Outer polygon drawn (${S.outerGeo.length} vertices, area ${polyArea(S.outerGeo).toFixed(1)} m²)`,
+        );
+        toast("Polygon closed — set N and Split", "ok");
+        draw();
+      }
+
+      function clearDraw() {
+        S.drawPts = [];
+        S.drawDone = false;
+        S.outerGeo = null;
+        S.topo = null;
+        document.getElementById("btn-split").disabled = true;
+        document.getElementById("split-badge").textContent = "needs polygon";
+        document.getElementById("split-badge").style.background = "";
+        document.getElementById("hint").style.opacity = "1";
+        document.getElementById("pc-list").innerHTML =
+          '<p style="color:var(--t3);font-size:11px">No parcels yet.</p>';
+        document.getElementById("hdr-a").textContent = "–";
+        document.getElementById("hdr-n").textContent = "–";
+        setStep(1);
+        updateDrawStatus();
+        draw();
+      }
+
+      function updateDrawStatus() {
+        const el = document.getElementById("draw-status");
+        const bcl = document.getElementById("btn-clear-draw");
+        const n = S.drawPts.length;
+        if (S.drawDone && S.outerGeo) {
+          el.innerHTML = `<b>✓ Polygon ready</b> (${S.outerGeo.length} vertices, ${polyArea(S.outerGeo).toFixed(1)} m²)<br>Now set N and click <b>Split</b>.`;
+          el.classList.add("done");
+          bcl.disabled = false;
+        } else if (n === 0) {
+          el.innerHTML =
+            "<b>Click on the canvas</b> to place polygon vertices. Double-click or click the first point to close.";
+          el.classList.remove("done");
+          bcl.disabled = true;
+        } else if (n < 3) {
+          el.innerHTML = `<b>${n} point${n > 1 ? "s" : ""} placed.</b> Keep clicking to add vertices (need ≥3).`;
+          el.classList.remove("done");
+          bcl.disabled = false;
+        } else {
+          el.innerHTML = `<b>${n} vertices.</b> Click the <span style="color:#3fb950">green start point</span> or double-click to close.`;
+          el.classList.remove("done");
+          bcl.disabled = false;
+        }
+      }
+
+      function setStep(n) {
+        ["stp-1", "stp-2", "stp-3"].forEach((id, i) => {
+          const el = document.getElementById(id);
+          el.classList.remove("active", "done");
+          if (i + 1 < n) el.classList.add("done");
+          else if (i + 1 === n) el.classList.add("active");
+        });
+      }
+
+      // ══════════════════════════════════════════════════════
+      // VIEW
+      // ══════════════════════════════════════════════════════
+      function fitView() {
+        const pts = S.topo ? S.topo.vertices : S.outerGeo || S.drawPts;
+        if (!pts || !pts.length) return;
+        const xs = pts.map((v) => v.x || v[0]),
+          ys = pts.map((v) => v.y || v[1]);
+        const mnX = Math.min(...xs),
+          mxX = Math.max(...xs);
+        const mnY = Math.min(...ys),
+          mxY = Math.max(...ys);
+        S.pan = { x: (mnX + mxX) / 2, y: (mnY + mxY) / 2 };
+        const sx = (canvas.width * 0.75) / (mxX - mnX || 1);
+        const sy = (canvas.height * 0.75) / (mxY - mnY || 1);
+        S.zoom = Math.min(sx, sy);
+        updateZLbl();
+        draw();
+      }
+      function doZoom(f) {
+        S.zoom = Math.max(0.05, Math.min(2000, S.zoom * f));
+        updateZLbl();
+        draw();
+      }
+      function updateZLbl() {
+        document.getElementById("zoom-lbl").textContent =
+          `${Math.round(S.zoom * 100)}%`;
+      }
+
+      // ══════════════════════════════════════════════════════
+      // TOOLS
+      // ══════════════════════════════════════════════════════
+      function setTool(t) {
+        if (S.tool !== t && S.tool !== "pan" && t !== "pan") {
+          S.selEdges = [];
+          S.selVtxs = [];
+          S.hoverEdge = null;
+          S.hoverVtx = null;
+          S.dragVtx = null;
+          S.dragEdge = null;
+          if (typeof updateVtxTools === "function") updateVtxTools();
+        }
+        S.tool = t;
+        const cls = {
+          pan: "",
+          draw: "on-p",
+          select: "on",
+          "edit-outer": "on-y",
+          "edit-bg": "on",
+        };
+        ["pan", "draw", "select", "edit-outer", "edit-bg"].forEach((n) => {
+          const b = document.getElementById(`tool-${n}`);
+          if (!b) return;
+          b.classList.remove("on", "on-p", "on-g", "on-y");
+          if (n === t) b.classList.add(cls[n] || "on");
+        });
+        canvas.style.cursor = t === "draw" ? "crosshair" : "default";
+        const bd = document.getElementById("btn-draw-tool");
+        if (bd) bd.classList.toggle("active", t === "draw");
+        draw();
+      }
+
+      function syncN(v) {
+        v = Math.max(2, Math.min(20, parseInt(v) || 3));
+        document.getElementById("n-range").value = v;
+        document.getElementById("n-num").value = v;
+        document.getElementById("n-val").textContent = v;
+      }
+
+      function tog(el, k) {
+        el.classList.toggle("on");
+        S[k] = el.classList.contains("on");
+        draw();
+      }
+
+      // ══════════════════════════════════════════════════════
+      // LOAD EXAMPLES
+      // ══════════════════════════════════════════════════════
+      function loadEx(key) {
+        const geo = EXAMPLES[key];
+        S.drawPts = [];
+        S.drawDone = false;
+        S.outerGeo = geo.outer.coordinates[0]
+          .slice(0, -1)
+          .map(([x, y]) => ({ x, y }));
+        S.topo = buildTopo(geo);
+        S.selParcel = null;
+        S.selVtxs = [];
+        document.getElementById("btn-split").disabled = false;
+        document.getElementById("split-badge").textContent = "ready ✓";
+        document.getElementById("split-badge").style.background = "var(--g)";
+        document.getElementById("hint").style.opacity = "0";
+        setStep(3);
+        updateDrawStatus();
+        fitView();
+        logA(`Example "${key}" loaded (${S.topo.parcels.length} parcels)`);
+        toast(`${key} loaded`, "ok");
+      }
+
+      // ══════════════════════════════════════════════════════
+      // IMPORT / EXPORT
+      // ══════════════════════════════════════════════════════
+      function openModal() {
+        document.getElementById("modal").classList.add("open");
+      }
+      function closeModal() {
+        document.getElementById("modal").classList.remove("open");
+      }
+
+      function importGJ() {
+        const raw = document.getElementById("paste-in").value.trim();
+        if (!raw) {
+          toast("Paste GeoJSON first", "er");
+          return;
+        }
+        try {
+          const geo = JSON.parse(raw);
+          S.topo = buildTopo(geo);
+          S.outerGeo = S.topo.outer;
+          S.drawDone = false;
+          S.drawPts = [];
+          document.getElementById("btn-split").disabled = false;
+          document.getElementById("hint").style.opacity = "0";
+          closeModal();
+          setStep(3);
+          fitView();
+          logA(`Custom GeoJSON: ${S.topo.parcels.length} parcels`);
+          toast("GeoJSON loaded", "ok");
+        } catch (e) {
+          toast("Parse error: " + e.message, "er");
+        }
+      }
+
+      function exportGJ() {
+        if (!S.topo) {
+          toast("Nothing to export", "er");
+          return;
+        }
+        const outerRing = S.topo.outer.map((v) => [v.x, v.y]);
+        outerRing.push(outerRing[0]);
+        const geo = {
+          outer: { type: "Polygon", coordinates: [outerRing] },
+          parcels: S.topo.parcels.map((p) => {
+            const ring = p.vids.map((i) => [
+              S.topo.vertices[i].x,
+              S.topo.vertices[i].y,
+            ]);
+            ring.push(ring[0]);
+            return { type: "Polygon", coordinates: [ring] };
+          }),
+        };
+        const blob = new Blob([JSON.stringify(geo, null, 2)], {
+          type: "application/json",
+        });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "parcels.geojson";
+        a.click();
+        toast("Exported", "ok");
+      }
+
+      // ══════════════════════════════════════════════════════
+      // EQUALIZE (API)
+      // ══════════════════════════════════════════════════════
+      async function runEq() {
+        if (!S.topo) {
+          toast("Load or draw geometry first", "er");
+          return;
+        }
+        const btn = document.getElementById("btn-eq");
+        btn.disabled = true;
+        btn.innerHTML = '<span class="sp2"></span> Running…';
+
+        const outerRing = S.topo.outer.map((v) => [v.x, v.y]);
+        outerRing.push(outerRing[0]);
+        const geo = {
+          outer: { type: "Polygon", coordinates: [outerRing] },
+          parcels: S.topo.parcels.map((p) => {
+            const ring = p.vids.map((i) => [
+              S.topo.vertices[i].x,
+              S.topo.vertices[i].y,
+            ]);
+            ring.push(ring[0]);
+            return { type: "Polygon", coordinates: [ring] };
+          }),
+        };
+
+        let ta = null;
+        const taRaw = document.getElementById("ta-json").value.trim();
+        if (taRaw) {
+          ta = getTargetAreas();
+          if (!ta) {
+            toast("Bad target areas JSON", "er");
+            done();
+            return;
+          }
+        }
+
+        const url = document.getElementById("api-url").value.replace(/\/$/, "");
+        const payload = {
+          geojson: {
+            outer: {
+              type: "Polygon",
+              coordinates: [
+                S.topo.outer
+                  .map((v) => [v.x, v.y])
+                  .concat([S.topo.outer.map((v) => [v.x, v.y])[0]]),
+              ],
+            },
+            parcels: S.topo.parcels.map((p) => {
+              const ring = p.vids.map((i) => [
+                S.topo.vertices[i].x,
+                S.topo.vertices[i].y,
+              ]);
+              ring.push(ring[0]);
+              return { type: "Polygon", coordinates: [ring] };
+            }),
+          },
+          all_interior_movable: S.allMovable,
+          max_iter: +document.getElementById("max-iter").value || 200,
+          tol: +document.getElementById("tol").value || 1e-8,
+          target_areas: ta,
+          validate_output: false,
+        };
+
+        const t0 = performance.now();
+        try {
+          const r = await fetch(`${url}/equalize`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const elapsed = ((performance.now() - t0) / 1000).toFixed(2);
+          if (!r.ok) {
+            const e = await r.json();
+            throw new Error(e.detail || r.statusText);
+          }
+          const res = await r.json();
+          applyResult(res);
+          updateStats(res.stats);
+          showTab("stats");
+          logOk(
+            `✓ ${elapsed}s — ${res.stats.iterations} iters, max err ${res.stats.max_area_error_pct.toFixed(4)}%`,
+          );
+          toast("Equalized ✓", "ok");
+          draw();
+        } catch (e) {
+          logR("Error: " + e.message);
+          toast(e.message, "er");
+        }
+        done();
+        function done() {
+          btn.disabled = false;
+          btn.innerHTML =
+            '<svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2l10 6-10 6V2z"/></svg> Equalize';
+        }
+      }
+
+      function applyResult(result) {
+        result.features.forEach((f, i) => {
+          const ring = f.geometry.coordinates[0].slice(0, -1);
+          const p = S.topo.parcels[i];
+          ring.forEach(([x, y], k) => {
+            const vid = p.vids[k];
+            if (S.topo.vertices[vid]) {
+              S.topo.vertices[vid].x = x;
+              S.topo.vertices[vid].y = y;
+            }
+          });
+        });
+      }
+
+      // ══════════════════════════════════════════════════════
+      // UI UPDATES
+      // ══════════════════════════════════════════════════════
+      function updatePcList() {
+        if (!S.topo && !S.outerGeo) return;
+
+        const mainDiv = document.getElementById("main-pc-info");
+        if (mainDiv) {
+          if (S.outerGeo) {
+            const a = polyArea(S.outerGeo);
+            mainDiv.innerHTML = `<div style="background:var(--bg3); padding:10px; border-radius:6px; font-size:12px; border:1px solid var(--border);">
+              <strong style="color:var(--accent); font-size: 13px;">Main Polygon</strong><br>
+              <div style="margin-top: 6px;">Area: <span style="color:var(--t1)">${a.toFixed(2)} m²</span></div>
+              <div style="margin-top: 3px;">Vertices: <span style="color:var(--t1)">${S.outerGeo.length}</span></div>
+            </div>`;
+          } else {
+            mainDiv.innerHTML = "";
+          }
+        }
+
+        const div = document.getElementById("pc-list");
+        if (!S.topo) {
+          div.innerHTML =
+            '<p style="color:var(--t3);font-size:11px">No parcels yet.</p>';
+          document.getElementById("hdr-a").textContent = "–";
+          document.getElementById("hdr-n").textContent = "–";
+          return;
+        }
+
+        const tot = totalArea();
+        div.innerHTML = "";
+        document.getElementById("hdr-a").textContent = `${tot.toFixed(1)} m²`;
+        document.getElementById("hdr-n").textContent = S.topo.parcels.length;
+        S.topo.parcels.forEach((p, i) => {
+          const ta = targetArea(i);
+          const a = pArea(p);
+          const ep = ta > 0 ? ((a - ta) / ta) * 100 : 0;
+          const abs = Math.abs(ep);
+          const ec = abs < 0.1 ? "eg" : abs < 2 ? "ew" : "eb";
+          const bar = Math.min(100, (a / (tot / S.topo.parcels.length)) * 50);
+          const sel = S.selParcel === i;
+          const el = document.createElement("div");
+          el.className = `pc${sel ? " sel" : ""}`;
+          el.dataset.idx = i;
+          el.onclick = () => {
+            S.selParcel = i;
+            draw();
+            hiPc(i);
+          };
+          el.onmouseenter = () => {
+            S.hoveredParcelId = i;
+            _origDraw();
+          };
+          el.onmouseleave = () => {
+            if (S.hoveredParcelId === i) {
+              S.hoveredParcelId = null;
+              _origDraw();
+            }
+          };
+          el.innerHTML = `<div class="pch"><div class="pcd" style="background:${p.color}"></div><div class="pcn">${p.label}</div></div>
+<div class="pca">${a.toFixed(2)} m² <span style="color:var(--t3)">→ ${ta.toFixed(1)}</span></div>
+<div class="pce ${ec}">${ep >= 0 ? "+" : ""}${ep.toFixed(2)}%</div>
+<div class="pb"><div class="pf" style="width:${bar}%;background:${p.color}"></div></div>`;
+          div.appendChild(el);
+        });
+      }
+
+      function hiPc(idx) {
+        document
+          .querySelectorAll(".pc")
+          .forEach((el) => el.classList.toggle("sel", +el.dataset.idx === idx));
+      }
+
+      function updateStats(s) {
+        const ep = s.max_area_error_pct;
+        document.getElementById("st-ok").textContent = s.success
+          ? "✓ OK"
+          : "✗ FAIL";
+        document.getElementById("st-ok").className =
+          `sv ${s.success ? "g" : "r"}`;
+        document.getElementById("st-it").textContent = s.iterations;
+        document.getElementById("st-er").textContent = `${ep.toFixed(4)}%`;
+        document.getElementById("st-er").className =
+          `sv ${ep < 0.1 ? "g" : ep < 0.5 ? "" : "r"}`;
+        document.getElementById("st-n").textContent =
+          S.topo?.parcels.length || "–";
+      }
+
+      function showTab(n) {
+        const ns = ["parcels", "stats", "log"];
+        document
+          .querySelectorAll(".tab")
+          .forEach((t, i) => t.classList.toggle("on", ns[i] === n));
+        document
+          .querySelectorAll(".tc")
+          .forEach((t) => t.classList.remove("on"));
+        document.getElementById(`tab-${n}`)?.classList.add("on");
+      }
+
+      function resetAll() {
+        S.topo = null;
+        S.outerGeo = null;
+        S.drawPts = [];
+        S.drawDone = false;
+        S.selParcel = null;
+        S.selVtxs = [];
+        S.hoverVtx = null;
+        S.dragVtx = null;
+        S.dragEdge = null;
+        S.hoverEdge = null;
+        document.getElementById("btn-split").disabled = true;
+        document.getElementById("split-badge").textContent = "needs polygon";
+        document.getElementById("split-badge").style.background = "";
+        document.getElementById("hint").style.opacity = "1";
+        document.getElementById("pc-list").innerHTML =
+          '<p style="color:var(--t3);font-size:11px">No parcels yet.</p>';
+        document.getElementById("hdr-a").textContent = "–";
+        document.getElementById("hdr-n").textContent = "–";
+        setStep(1);
+        updateDrawStatus();
+        draw();
+      }
+
+      // ══════════════════════════════════════════════════════
+      // LOG / TOAST
+      // ══════════════════════════════════════════════════════
+      function al(h) {
+        const l = document.getElementById("log");
+        l.innerHTML += h + "\n";
+        l.scrollTop = l.scrollHeight;
+      }
+      const xe = (s) =>
+        s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      function logOk(m) {
+        al(`<span class="lok">${xe(m)}</span>`);
+      }
+      function logR(m) {
+        al(`<span class="lr">${xe(m)}</span>`);
+      }
+      function logA(m) {
+        al(`<span class="la">${xe(m)}</span>`);
+      }
+
+      function toast(msg, type = "ok") {
+        const w = document.getElementById("toasts");
+        const t = document.createElement("div");
+        t.className = `toast ${type}`;
+        const ic = type === "ok" ? "✓" : "✗";
+        const col = type === "ok" ? "var(--g)" : "var(--r)";
+        t.innerHTML = `<span style="color:${col};font-weight:700">${ic}</span> ${xe(msg)}`;
+        w.appendChild(t);
+        setTimeout(() => {
+          t.style.opacity = "0";
+          t.style.transition = "opacity .3s";
+          setTimeout(() => t.remove(), 300);
+        }, 3000);
+      }
+
+      // ══════════════════════════════════════════════════════
+      // API HEALTH
+      // ══════════════════════════════════════════════════════
+      async function checkAPI() {
+        const url = document.getElementById("api-url").value.replace(/\/$/, "");
+        const dot = document.getElementById("api-dot"),
+          st = document.getElementById("api-st");
+        try {
+          const r = await fetch(`${url}/health`, {
+            signal: AbortSignal.timeout(2000),
+          });
+          dot.classList.toggle("on", r.ok);
+          st.textContent = r.ok ? "online" : "error";
+        } catch {
+          dot.classList.remove("on");
+          st.textContent = "offline";
+        }
+      }
+      checkAPI();
+      setInterval(checkAPI, 5000);
+
+      // ══════════════════════════════════════════════════════
+      // REDRAW LOOP for live parcel list
+      // ══════════════════════════════════════════════════════
+      let _lastDrawId = null;
+      const _origDraw = draw;
+      window.draw = function () {
+        _origDraw();
+        if (S.topo || S.outerGeo) updatePcList();
+      };
+
+      // ══════════════════════════════════════════════════════
+      // INIT
+      // ══════════════════════════════════════════════════════
+      setTool("draw");
+      updateDrawStatus();
+      S.pan = { x: 15, y: 8 };
+      S.zoom = 32;
+      draw();
+    </script>
+  </body>
+</html>
