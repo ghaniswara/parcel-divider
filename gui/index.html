@@ -873,6 +873,9 @@
                 id="ta-json"
                 placeholder='{"0":"10%","1":"45%","2":"45%"}'
               ></textarea>
+              <button class="btn btn-g" style="width: 100%; margin-top: 4px;" onclick="applyTargetAreas()">
+                🔄 Update Target Labels
+              </button>
             </div>
 
             <div class="brow" style="margin-bottom: 7px">
@@ -905,13 +908,36 @@
                 >Shift+Click</span
               >
             </div>
+            <div class="tr" style="margin-bottom: 4px">
+              <label>Outer Lengths</label>
+              <div class="tog" onclick="tog(this, 'showOuterLen')"></div>
+            </div>
+            <div class="tr" style="margin-bottom: 4px">
+              <label>Outer Angles</label>
+              <div class="tog" onclick="tog(this, 'showOuterAng')"></div>
+            </div>
+            <div class="tr" style="margin-bottom: 4px">
+              <label>Parcel Lengths</label>
+              <div class="tog" onclick="tog(this, 'showParcelLen')"></div>
+            </div>
             <div class="tr" style="margin-bottom: 8px">
-              <label>Show measurements (lengths/angles)</label>
-              <div
-                class="tog"
-                id="tog-meas"
-                onclick="tog(this, 'showMeas')"
-              ></div>
+              <label>Parcel Angles</label>
+              <div class="tog" onclick="tog(this, 'showParcelAng')"></div>
+            </div>
+            <div class="fr">
+              <label>Grid Opacity</label>
+              <input
+                id="grid-op"
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value="1"
+                oninput="
+                  S.gridOpacity = parseFloat(this.value);
+                  draw();
+                "
+              />
             </div>
             <div class="brow">
               <button
@@ -937,6 +963,14 @@
                 disabled
               >
                 ⏸ Parallel
+              </button>
+              <button
+                class="btn btn-g"
+                id="btn-lock"
+                onclick="toggleLock()"
+                disabled
+              >
+                🔒 Lock
               </button>
             </div>
           </div>
@@ -1042,7 +1076,8 @@
               <button class="btn btn-g" onclick="openModal()">
                 📋 Paste GeoJSON
               </button>
-              <button class="btn btn-g" onclick="exportGJ()">⬇ Export</button>
+              <button class="btn btn-g" onclick="exportGJ()">⬇ GeoJSON</button>
+              <button class="btn btn-g" onclick="exportImage()">🖼 Image</button>
             </div>
           </div>
         </div>
@@ -1070,7 +1105,11 @@
             <button class="tb" id="tool-edit-bg" onclick="setTool('edit-bg')">
               🖼 Edit Bg
             </button>
+            <button class="tb" id="tool-calibrate" onclick="setTool('calibrate')">
+              📏 Calibrate
+            </button>
             <div style="flex: 1"></div>
+            <span style="font-size: 11px; color: var(--accent); margin-right: 12px; cursor: pointer; text-decoration: underline;" id="scale-lbl" onclick="editScale()" title="Click to manually edit scale">Scale: 1.0000x</span>
             <span style="font-size: 10px; color: var(--t3)" id="zoom-lbl"
               >100%</span
             >
@@ -1436,7 +1475,10 @@
         drawPts: [], // [{x,y}] placed points
         mousePt: null, // current mouse world pos
         drawDone: false, // polygon closed
-        showMeas: false,
+        showOuterLen: false,
+        showOuterAng: false,
+        showParcelLen: false,
+        showParcelAng: false,
         hoveredParcelId: null,
         // Drag / Select (Independent for outer vs topo)
         selVtxs: [], // array of {type:'topo'|'outer', id}
@@ -1453,6 +1495,9 @@
         dragMode: true,
         liveEq: false,
         allMovable: true,
+        measScale: 1,
+        lockedEdges: [],
+        gridOpacity: 1.0,
         // Background
         bgImage: null,
         bg: { x: 0, y: 0, scale: 1, rot: 0, opacity: 0.5 },
@@ -1682,7 +1727,7 @@
         let best = null,
           bestD = Infinity;
 
-        if (S.tool === "select" && S.topo) {
+        if ((S.tool === "select" || S.tool === "calibrate") && S.topo) {
           S.topo.parcels.forEach((p) => {
             for (let i = 0; i < p.vids.length; i++) {
               const v1 = p.vids[i],
@@ -1703,7 +1748,9 @@
               }
             }
           });
-        } else if (S.tool === "edit-outer" && S.outerGeo) {
+        }
+        
+        if (!best && (S.tool === "edit-outer" || S.tool === "calibrate") && S.outerGeo) {
           for (let i = 0; i < S.outerGeo.length; i++) {
             const a = S.outerGeo[i],
               b = S.outerGeo[(i + 1) % S.outerGeo.length];
@@ -1745,11 +1792,15 @@
           { id: "bl", x: -hw, y: hh },
           { id: "br", x: hw, y: hh },
         ];
-
         for (let c of corners) {
           if (Math.hypot(rx - c.x, ry - c.y) < r)
             return { type: "bg-corner", id: c.id };
         }
+
+        if (Math.abs(ry - (-hh)) < r && rx > -hw && rx < hw) return { type: "bg-edge", id: "t" };
+        if (Math.abs(ry - hh) < r && rx > -hw && rx < hw) return { type: "bg-edge", id: "b" };
+        if (Math.abs(rx - (-hw)) < r && ry > -hh && ry < hh) return { type: "bg-edge", id: "l" };
+        if (Math.abs(rx - hw) < r && ry > -hh && ry < hh) return { type: "bg-edge", id: "r" };
 
         if (rx >= -hw && rx <= hw && ry >= -hh && ry <= hh)
           return { type: "bg-body" };
@@ -1803,6 +1854,31 @@
         return best;
       }
 
+      function isLocked(e) {
+        if (!S.lockedEdges) return false;
+        return S.lockedEdges.some(le => (le.v1 === e.v1 && le.v2 === e.v2) || (le.v1 === e.v2 && le.v2 === e.v1));
+      }
+
+      function toggleLock() {
+        if (!S.selEdges) return;
+        const topos = S.selEdges.filter(e => e.type === "topo");
+        if (!topos.length) return;
+        const allLocked = topos.every(e => isLocked(e));
+        if (allLocked) {
+          topos.forEach(e => {
+            S.lockedEdges = S.lockedEdges.filter(le => !((le.v1 === e.v1 && le.v2 === e.v2) || (le.v1 === e.v2 && le.v2 === e.v1)));
+          });
+          toast("Edges unlocked", "ok");
+        } else {
+          topos.forEach(e => {
+            if (!isLocked(e)) S.lockedEdges.push({v1: e.v1, v2: e.v2});
+          });
+          toast("Edges locked", "ok");
+        }
+        draw();
+        updateVtxTools();
+      }
+
       function getEdgePts(ed) {
         if (ed.type === "topo")
           return {
@@ -1829,29 +1905,48 @@
         const rx = ref.B.x - ref.A.x,
           ry = ref.B.y - ref.A.y;
 
-        // Target midpoint
-        const mx = (tgt.A.x + tgt.B.x) / 2,
-          my = (tgt.A.y + tgt.B.y) / 2;
-
-        // New Target infinite line passes through (mx, my) and (mx+rx, my+ry)
-        const p1 = { x: mx, y: my },
-          p2 = { x: mx + rx, y: my + ry };
-
         if (S.selEdges[1].type === "topo") {
-          const a1 = getAdjVertex(tgt.v1, tgt.v2);
-          const a2 = getAdjVertex(tgt.v2, tgt.v1);
+          let locks1 = 0, locks2 = 0;
+          let line1_B = null, line2_B = null;
+          if (S.lockedEdges) {
+            const l1 = S.lockedEdges.filter(le => le.v1 === tgt.v1 || le.v2 === tgt.v1);
+            locks1 = l1.length;
+            if (locks1 === 1) line1_B = S.topo.vertices[l1[0].v1 === tgt.v1 ? l1[0].v2 : l1[0].v1];
+            
+            const l2 = S.lockedEdges.filter(le => le.v1 === tgt.v2 || le.v2 === tgt.v2);
+            locks2 = l2.length;
+            if (locks2 === 1) line2_B = S.topo.vertices[l2[0].v1 === tgt.v2 ? l2[0].v2 : l2[0].v1];
+          }
 
-          if (a1 !== null) {
-            const vA = S.topo.vertices[a1];
-            const inter = lineIntersection(p1, p2, tgt.A, vA);
+          if (!line1_B) {
+            const a1 = getAdjVertex(tgt.v1, tgt.v2);
+            if (a1 !== null) line1_B = S.topo.vertices[a1];
+          }
+          if (!line2_B) {
+            const a2 = getAdjVertex(tgt.v2, tgt.v1);
+            if (a2 !== null) line2_B = S.topo.vertices[a2];
+          }
+
+          if (locks1 >= 2 && locks2 >= 2) {
+            toast("Cannot make parallel: both endpoints are fully locked", "er");
+            return;
+          }
+
+          let px = (tgt.A.x + tgt.B.x) / 2, py = (tgt.A.y + tgt.B.y) / 2;
+          if (locks1 >= 2) { px = tgt.A.x; py = tgt.A.y; }
+          else if (locks2 >= 2) { px = tgt.B.x; py = tgt.B.y; }
+
+          const p1 = { x: px, y: py }, p2 = { x: px + rx, y: py + ry };
+
+          if (locks1 < 2 && line1_B) {
+            const inter = lineIntersection(p1, p2, tgt.A, line1_B);
             if (inter) {
               S.topo.vertices[tgt.v1].x = inter.x;
               S.topo.vertices[tgt.v1].y = inter.y;
             }
           }
-          if (a2 !== null) {
-            const vB = S.topo.vertices[a2];
-            const inter = lineIntersection(p1, p2, tgt.B, vB);
+          if (locks2 < 2 && line2_B) {
+            const inter = lineIntersection(p1, p2, tgt.B, line2_B);
             if (inter) {
               S.topo.vertices[tgt.v2].x = inter.x;
               S.topo.vertices[tgt.v2].y = inter.y;
@@ -1893,6 +1988,13 @@
           S.topo.parcels.forEach((p) => {
             p.vids = p.vids.filter((id) => id !== vid);
           });
+          if (S.lockedEdges) {
+            S.lockedEdges = S.lockedEdges.filter(le => le.v1 !== vid && le.v2 !== vid);
+            S.lockedEdges.forEach(le => {
+              if (le.v1 > vid) le.v1--;
+              if (le.v2 > vid) le.v2--;
+            });
+          }
           S.topo.vertices.splice(vid, 1);
           S.topo.parcels.forEach((p) => {
             p.vids = p.vids.map((id) => (id > vid ? id - 1 : id));
@@ -1935,6 +2037,9 @@
           return;
         }
 
+        const targetId = topos[0];
+        let targetVtx = S.topo.vertices[targetId];
+
         let cx = 0,
           cy = 0;
         topos.forEach((id) => {
@@ -1944,15 +2049,53 @@
         cx /= topos.length;
         cy /= topos.length;
 
-        const targetId = topos[0];
-        S.topo.vertices[targetId].x = cx;
-        S.topo.vertices[targetId].y = cy;
+        let maxLocks = 0;
+        let constraintLine = null;
+        if (S.lockedEdges) {
+          topos.forEach(id => {
+            const conns = S.lockedEdges.filter(le => le.v1 === id || le.v2 === id);
+            if (conns.length > maxLocks) maxLocks = conns.length;
+            if (conns.length === 1 && !constraintLine) {
+               const le = conns[0];
+               const otherVid = le.v1 === id ? le.v2 : le.v1;
+               constraintLine = { 
+                 Ax: S.topo.vertices[id].x, Ay: S.topo.vertices[id].y,
+                 Bx: S.topo.vertices[otherVid].x, By: S.topo.vertices[otherVid].y
+               };
+            }
+          });
+        }
+
+        if (maxLocks >= 2) {
+           const constrainedId = topos.find(id => S.lockedEdges.filter(le => le.v1 === id || le.v2 === id).length >= 2);
+           targetVtx.x = S.topo.vertices[constrainedId].x;
+           targetVtx.y = S.topo.vertices[constrainedId].y;
+        } else if (maxLocks === 1 && constraintLine) {
+           const dx = constraintLine.Bx - constraintLine.Ax;
+           const dy = constraintLine.By - constraintLine.Ay;
+           const l2 = dx * dx + dy * dy;
+           if (l2 > 0) {
+             const t = ((cx - constraintLine.Ax) * dx + (cy - constraintLine.Ay) * dy) / l2;
+             targetVtx.x = constraintLine.Ax + t * dx;
+             targetVtx.y = constraintLine.Ay + t * dy;
+           }
+        } else {
+           targetVtx.x = cx;
+           targetVtx.y = cy;
+        }
 
         const toDelete = topos.slice(1);
         toDelete.forEach((dragId) => {
           S.topo.parcels.forEach((p) => {
             p.vids = p.vids.map((id) => (id === dragId ? targetId : id));
           });
+          if (S.lockedEdges) {
+            S.lockedEdges.forEach(le => {
+              if (le.v1 === dragId) le.v1 = targetId;
+              if (le.v2 === dragId) le.v2 = targetId;
+            });
+            S.lockedEdges = S.lockedEdges.filter(le => le.v1 !== le.v2);
+          }
         });
 
         deleteVertices(toDelete);
@@ -2079,6 +2222,7 @@
         if (S.outerGeo) drawOuterBoundary();
         if (S.topo) drawTopo();
         drawInProgress();
+        if (S.topo) drawLockedEdges();
         if (S.outerGeo || S.topo) drawHandles();
         updateVtxTools();
       }
@@ -2087,6 +2231,7 @@
         const bJ = document.getElementById("btn-join");
         const bD = document.getElementById("btn-del");
         const bP = document.getElementById("btn-para");
+        const bL = document.getElementById("btn-lock");
         if (!bJ) return;
         const n = S.selVtxs ? S.selVtxs.length : 0;
         const numTopo = S.selVtxs
@@ -2095,6 +2240,16 @@
         bJ.disabled = numTopo < 2;
         bD.disabled = n === 0;
         if (bP) bP.disabled = !S.selEdges || S.selEdges.length !== 2;
+        if (bL) {
+          const numTopoEdges = S.selEdges ? S.selEdges.filter(e => e.type === "topo").length : 0;
+          bL.disabled = numTopoEdges === 0;
+          if (numTopoEdges > 0) {
+            const allLocked = S.selEdges.filter(e => e.type === "topo").every(e => isLocked(e));
+            bL.innerHTML = allLocked ? "🔓 Unlock" : "🔒 Lock";
+          } else {
+            bL.innerHTML = "🔒 Lock";
+          }
+        }
       }
 
       function drawGrid() {
@@ -2102,6 +2257,7 @@
         const [wx0, wy0] = s2w(0, canvas.height);
         const [wx1, wy1] = s2w(canvas.width, 0);
         ctx.save();
+        ctx.globalAlpha = S.gridOpacity !== undefined ? S.gridOpacity : 1.0;
         ctx.strokeStyle = "#161d27";
         ctx.lineWidth = 1;
         for (let x = Math.floor(wx0 / step) * step; x <= wx1; x += step) {
@@ -2156,7 +2312,7 @@
           ctx.setLineDash([]);
         }
 
-        if (S.showMeas) {
+        if (S.showOuterLen || S.showOuterAng) {
           ctx.font = `500 ${Math.max(9, S.zoom * 0.4)}px JetBrains Mono`;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
@@ -2190,12 +2346,22 @@
               my = vA.y + dy / 2;
             const [smx, smy] = w2s(mx, my);
 
-            const txtLen = `${len.toFixed(2)}m`;
+            let nx = -dy, ny = dx;
+            if (signedArea < 0) { nx = dy; ny = -dx; }
+            const nlen = Math.hypot(nx, ny) || 1;
+            nx /= nlen; ny /= nlen;
+            const tx = smx - nx * 18;
+            const ty = smy + ny * 18;
+
+            const txtLen = `${(len * S.measScale).toFixed(2)}m`;
             const wLen = ctx.measureText(txtLen).width;
-            ctx.fillStyle = "#0d1117cc";
-            ctx.fillRect(smx - wLen / 2 - 3, smy - 7, wLen + 6, 14);
-            ctx.fillStyle = "#a371f7";
-            ctx.fillText(txtLen, smx, smy);
+            
+            if (S.showOuterLen) {
+              ctx.fillStyle = "#0d1117cc";
+              ctx.fillRect(tx - wLen / 2 - 3, ty - 7, wLen + 6, 14);
+              ctx.fillStyle = "#a371f7";
+              ctx.fillText(txtLen, tx, ty);
+            }
 
             const baX = vA.x - vB.x,
               baY = vA.y - vB.y;
@@ -2212,14 +2378,16 @@
               vy = cy - vB.y;
             const vlen = Math.hypot(vx, vy) || 1;
             const ox = sbx + (vx / vlen) * 22;
-            const oy = sby + (vy / vlen) * 22;
+            const oy = sby - (vy / vlen) * 22;
 
             const txtAng = `${Math.round(angle)}°`;
             const wAng = ctx.measureText(txtAng).width;
-            ctx.fillStyle = "#0d1117cc";
-            ctx.fillRect(ox - wAng / 2 - 3, oy - 7, wAng + 6, 14);
-            ctx.fillStyle = "#d29922";
-            ctx.fillText(txtAng, ox, oy);
+            if (S.showOuterAng) {
+              ctx.fillStyle = "#0d1117cc";
+              ctx.fillRect(ox - wAng / 2 - 3, oy - 7, wAng + 6, 14);
+              ctx.fillStyle = "#d29922";
+              ctx.fillText(txtAng, ox, oy);
+            }
           }
         }
         ctx.restore();
@@ -2303,6 +2471,7 @@
       }
 
       function drawTopo() {
+        const drawnEdges = new Set();
         S.topo.parcels.forEach((p, i) => {
           const ta = targetArea(i);
           const a = pArea(p);
@@ -2339,7 +2508,9 @@
 
           drawLbl(p, a, ta);
 
-          if (S.showMeas || S.hoveredParcelId === i) {
+          const showMLen = S.showParcelLen || S.hoveredParcelId === i;
+          const showMAng = S.showParcelAng || S.hoveredParcelId === i;
+          if (showMLen || showMAng) {
             ctx.save();
             ctx.font = `500 ${Math.max(9, S.zoom * 0.4)}px JetBrains Mono`;
             ctx.textAlign = "center";
@@ -2374,12 +2545,25 @@
                 my = vA.y + dy / 2;
               const [smx, smy] = w2s(mx, my);
 
-              const txtLen = `${len.toFixed(2)}m`;
+              let nx = -dy, ny = dx;
+              if (signedArea < 0) { nx = dy; ny = -dx; }
+              const nlen = Math.hypot(nx, ny) || 1;
+              nx /= nlen; ny /= nlen;
+              const tx = smx - nx * 18;
+              const ty = smy + ny * 18;
+
+              const txtLen = `${(len * S.measScale).toFixed(2)}m`;
               const wLen = ctx.measureText(txtLen).width;
-              ctx.fillStyle = "#0d1117cc";
-              ctx.fillRect(smx - wLen / 2 - 3, smy - 7, wLen + 6, 14);
-              ctx.fillStyle = "#58a6ff";
-              ctx.fillText(txtLen, smx, smy);
+              
+              const edgeKey = Math.min(p.vids[k], p.vids[(k + 1) % nV]) + "-" + Math.max(p.vids[k], p.vids[(k + 1) % nV]);
+              const showMLen = S.showParcelLen || S.hoveredParcelId === i;
+              if (showMLen && !drawnEdges.has(edgeKey)) {
+                drawnEdges.add(edgeKey);
+                ctx.fillStyle = "#0d1117cc";
+                ctx.fillRect(tx - wLen / 2 - 3, ty - 7, wLen + 6, 14);
+                ctx.fillStyle = "#58a6ff";
+                ctx.fillText(txtLen, tx, ty);
+              }
 
               const baX = vA.x - vB.x,
                 baY = vA.y - vB.y;
@@ -2396,14 +2580,18 @@
                 vy = cy - vB.y;
               const vlen = Math.hypot(vx, vy) || 1;
               const ox = sbx + (vx / vlen) * 22;
-              const oy = sby + (vy / vlen) * 22;
+              const oy = sby - (vy / vlen) * 22;
 
               const txtAng = `${Math.round(angle)}°`;
               const wAng = ctx.measureText(txtAng).width;
-              ctx.fillStyle = "#0d1117cc";
-              ctx.fillRect(ox - wAng / 2 - 3, oy - 7, wAng + 6, 14);
-              ctx.fillStyle = "#d29922";
-              ctx.fillText(txtAng, ox, oy);
+              
+              const showMAng = S.showParcelAng || S.hoveredParcelId === i;
+              if (showMAng) {
+                ctx.fillStyle = "#0d1117cc";
+                ctx.fillRect(ox - wAng / 2 - 3, oy - 7, wAng + 6, 14);
+                ctx.fillStyle = "#d29922";
+                ctx.fillText(txtAng, ox, oy);
+              }
             }
             ctx.restore();
           }
@@ -2427,9 +2615,10 @@
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         const ep = ta > 0 ? ((a - ta) / ta) * 100 : 0;
+        const aDisp = a * S.measScale * S.measScale;
         const lines = [
           p.label,
-          `${a.toFixed(1)} m²`,
+          `${aDisp.toFixed(1)} m²`,
           ep >= 0 ? `+${ep.toFixed(1)}%` : `${ep.toFixed(1)}%`,
         ];
         const lh = fs + 3;
@@ -2453,6 +2642,34 @@
           ctx.fillText(txt, sx, y);
         });
         ctx.restore();
+      }
+
+      function drawLockedEdges() {
+        if (!S.topo || !S.lockedEdges) return;
+        S.lockedEdges.forEach(le => {
+          const vA = S.topo.vertices[le.v1];
+          const vB = S.topo.vertices[le.v2];
+          if (!vA || !vB) return;
+          const [Asx, Asy] = w2s(vA.x, vA.y);
+          const [Bsx, Bsy] = w2s(vB.x, vB.y);
+          
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(Asx, Asy);
+          ctx.lineTo(Bsx, Bsy);
+          ctx.strokeStyle = "#f78166";
+          ctx.lineWidth = 3;
+          ctx.setLineDash([4, 4]);
+          ctx.stroke();
+          ctx.restore();
+          
+          const sx = (Asx + Bsx) / 2;
+          const sy = (Asy + Bsy) / 2;
+          ctx.font = "14px sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("🔒", sx, sy);
+        });
       }
 
       function drawHandles() {
@@ -2682,6 +2899,25 @@
         if (!S.topo) return 0;
         return S.topo.parcels.reduce((s, p) => s + pArea(p), 0);
       }
+      function applyTargetAreas() {
+        if (!S.topo) {
+          toast("No parcels available", "er");
+          return;
+        }
+        const taRaw = document.getElementById("ta-json").value.trim();
+        if (taRaw) {
+          try {
+            JSON.parse(taRaw);
+            toast("Targets updated", "ok");
+          } catch {
+            toast("Invalid JSON format", "er");
+            return;
+          }
+        }
+        draw();
+        updatePcList();
+      }
+
       function getTargetAreas() {
         if (!S.topo) return null;
         const taRaw = document.getElementById("ta-json").value.trim();
@@ -2690,12 +2926,22 @@
           const parsed = JSON.parse(taRaw);
           const tot = totalArea();
           const ta = {};
+          let sumTa = 0;
           for (let k in parsed) {
             let val = parsed[k];
             if (typeof val === "string" && val.endsWith("%")) {
               val = (parseFloat(val.replace("%", "")) / 100) * tot;
+            } else {
+              val = parseFloat(val) / (S.measScale * S.measScale);
             }
-            ta[k] = parseFloat(val);
+            ta[k] = val;
+            sumTa += val;
+          }
+          // Normalize to ensure targets exactly sum to the total area
+          if (sumTa > 0) {
+            for (let k in ta) {
+              ta[k] = ta[k] * (tot / sumTa);
+            }
           }
           return ta;
         } catch {
@@ -2811,7 +3057,7 @@
         setStep(3);
         document.getElementById("hint").style.opacity = "0";
         logA(
-          `Split into ${n} lots (${dir}), areas: ${S.topo.parcels.map((p) => pArea(p).toFixed(1)).join(", ")}`,
+          `Split into ${n} lots (${dir}), areas: ${S.topo.parcels.map((p) => (pArea(p) * S.measScale * S.measScale).toFixed(1)).join(", ")}`,
         );
         toast(`${n} lots created — drag vertices or click Equalize`, "ok");
         fitView();
@@ -2836,6 +3082,45 @@
             (v) => v.type === S.dragVtx.type && v.id === S.dragVtx.id,
           );
           let targetPos = enforceInsideAndSnap(wx, wy, e, S.dragVtx);
+
+          let maxLocks = 0;
+          let constraintLine = null;
+          if (S.lockedEdges) {
+            S.selVtxsInit.forEach(sv => {
+              if (sv.type === "topo") {
+                const conns = S.lockedEdges.filter(le => le.v1 === sv.id || le.v2 === sv.id);
+                if (conns.length > maxLocks) maxLocks = conns.length;
+                if (conns.length === 1 && !constraintLine) {
+                  const le = conns[0];
+                  const otherVid = le.v1 === sv.id ? le.v2 : le.v1;
+                  const otherInit = S.selVtxsInit.find(v => v.type === "topo" && v.id === otherVid);
+                  const Ax = sv.ox, Ay = sv.oy;
+                  const Bx = otherInit ? otherInit.ox : S.topo.vertices[otherVid].x;
+                  const By = otherInit ? otherInit.oy : S.topo.vertices[otherVid].y;
+                  constraintLine = { Ax, Ay, Bx, By, sv };
+                }
+              }
+            });
+          }
+
+          if (maxLocks >= 2) {
+             targetPos = { x: primaryInit.ox, y: primaryInit.oy };
+          } else if (maxLocks === 1 && constraintLine) {
+             const svWantsX = constraintLine.sv.ox + (targetPos.x - primaryInit.ox);
+             const svWantsY = constraintLine.sv.oy + (targetPos.y - primaryInit.oy);
+             const dx = constraintLine.Bx - constraintLine.Ax;
+             const dy = constraintLine.By - constraintLine.Ay;
+             const l2 = dx * dx + dy * dy;
+             if (l2 > 0) {
+               const t = ((svWantsX - constraintLine.Ax) * dx + (svWantsY - constraintLine.Ay) * dy) / l2;
+               const svSnappedX = constraintLine.Ax + t * dx;
+               const svSnappedY = constraintLine.Ay + t * dy;
+               targetPos = {
+                 x: primaryInit.ox + (svSnappedX - constraintLine.sv.ox),
+                 y: primaryInit.oy + (svSnappedY - constraintLine.sv.oy)
+               };
+             }
+          }
 
           if (e.altKey && S.selEdges && S.selEdges.length === 1) {
             const ed = S.selEdges[0];
@@ -2877,6 +3162,7 @@
 
         // Dragging edge
         if (S.dragEdge) {
+          if (S.dragEdge.type === "topo" && isLocked(S.dragEdge)) return;
           const { mx, my } = S.dragEdge;
           const dx = wx - mx,
             dy = wy - my;
@@ -2937,15 +3223,49 @@
 
         // Dragging Background
         if (S.dragBg) {
-          const dx = wx - S.dragBgStart.wx;
-          const dy = wy - S.dragBgStart.wy;
           const o = S.dragBgStart.bgo;
 
           if (S.dragBg.type === "bg-body") {
+            const dx = wx - S.dragBgStart.wx;
+            const dy = wy - S.dragBgStart.wy;
             S.bg.x = o.x + dx;
             S.bg.y = o.y + dy;
             document.getElementById("bg-x").value = S.bg.x.toFixed(2);
             document.getElementById("bg-y").value = S.bg.y.toFixed(2);
+          } else if (S.dragBg.type === "bg-corner") {
+            const dxStart = S.dragBgStart.wx - o.x;
+            const dyStart = S.dragBgStart.wy - o.y;
+            const angStart = Math.atan2(dyStart, dxStart);
+            
+            const dxCurr = wx - o.x;
+            const dyCurr = wy - o.y;
+            const angCurr = Math.atan2(dyCurr, dxCurr);
+            
+            let diff = angCurr - angStart;
+            while (diff > Math.PI) diff -= 2 * Math.PI;
+            while (diff < -Math.PI) diff += 2 * Math.PI;
+            
+            S.bg.rot = o.rot + (diff * 180 / Math.PI);
+            
+            const rt = document.getElementById("bg-rt");
+            if (rt) {
+              let r = S.bg.rot % 360;
+              if (r > 180) r -= 360;
+              if (r < -180) r += 360;
+              rt.value = r;
+            }
+          } else if (S.dragBg.type === "bg-edge") {
+            const dxStart = S.dragBgStart.wx - o.x;
+            const dyStart = S.dragBgStart.wy - o.y;
+            const distStart = Math.hypot(dxStart, dyStart) || 1;
+            
+            const dxCurr = wx - o.x;
+            const dyCurr = wy - o.y;
+            const distCurr = Math.hypot(dxCurr, dyCurr);
+            
+            if (distCurr > 0.01) {
+               S.bg.scale = o.scale * (distCurr / distStart);
+            }
           }
           draw();
           return;
@@ -2963,12 +3283,17 @@
         if (S.tool === "edit-bg") {
           const hit = hitBg(sx, sy);
           if (hit) {
-            if (hit.type === "bg-corner")
-              canvas.style.cursor =
-                hit.id === "tl" || hit.id === "br"
-                  ? "nwse-resize"
-                  : "nesw-resize";
-            else canvas.style.cursor = "move";
+            if (hit.type === "bg-corner") {
+              canvas.style.cursor = "crosshair";
+            } else if (hit.type === "bg-edge") {
+              const absRot = Math.abs(S.bg.rot) % 180;
+              const isRotated = absRot > 45 && absRot < 135;
+              let isVert = (hit.id === "t" || hit.id === "b");
+              if (isRotated) isVert = !isVert;
+              canvas.style.cursor = isVert ? "ns-resize" : "ew-resize";
+            } else {
+              canvas.style.cursor = "move";
+            }
           } else {
             canvas.style.cursor = "default";
           }
@@ -2982,14 +3307,18 @@
         if (S.dragMode && (S.tool === "select" || S.tool === "edit-outer")) {
           S.hoverVtx = hitVtx(sx, sy);
           if (!S.hoverVtx) S.hoverEdge = hitEdge(sx, sy);
+        } else if (S.tool === "calibrate") {
+          S.hoverEdge = hitEdge(sx, sy);
         }
 
         canvas.style.cursor =
-          S.hoverVtx || S.hoverEdge
-            ? "grab"
-            : S.tool === "draw"
-              ? "crosshair"
-              : "default";
+          S.tool === "calibrate" && S.hoverEdge
+            ? "pointer"
+            : S.hoverVtx || S.hoverEdge
+              ? "grab"
+              : S.tool === "draw"
+                ? "crosshair"
+                : "default";
 
         const edgeStr = S.hoverEdge
           ? S.hoverEdge.type === "topo"
@@ -3155,6 +3484,22 @@
       });
 
       let lastClick = 0;
+
+      function editScale() {
+        const val = prompt("Enter the scale multiplier (e.g. 1 or 2.5):", S.measScale.toFixed(4));
+        if (val !== null) {
+          const num = parseFloat(val);
+          if (!isNaN(num) && num > 0) {
+            S.measScale = num;
+            document.getElementById('scale-lbl').textContent = 'Scale: ' + num.toFixed(4) + 'x';
+            toast("Scale updated to " + num.toFixed(4), "ok");
+            draw();
+            if (S.topo || S.outerGeo) updatePcList();
+            updateDrawStatus();
+          }
+        }
+      }
+
       canvas.addEventListener("click", (e) => {
         const r = canvas.getBoundingClientRect();
         const sx = e.clientX - r.left,
@@ -3163,6 +3508,35 @@
         const now = Date.now();
         const dbl = now - lastClick < 350;
         lastClick = now;
+
+        if (S.tool === "calibrate") {
+          const edge = hitEdge(sx, sy);
+          if (edge) {
+            let A, B;
+            if (edge.type === "topo") {
+              A = S.topo.vertices[edge.v1];
+              B = S.topo.vertices[edge.v2];
+            } else {
+              A = S.outerGeo[edge.i1];
+              B = S.outerGeo[edge.i2];
+            }
+            const currentLen = Math.hypot(B.x - A.x, B.y - A.y);
+            const actLen = currentLen * S.measScale;
+            const val = prompt("Enter the actual distance for this edge (m):", actLen.toFixed(2));
+            if (val !== null) {
+              const num = parseFloat(val);
+              if (!isNaN(num) && num > 0) {
+                S.measScale = num / currentLen;
+                document.getElementById('scale-lbl').textContent = 'Scale: ' + S.measScale.toFixed(4) + 'x';
+                toast("Numbering calibrated to " + num + "m", "ok");
+                draw();
+                if (S.topo || S.outerGeo) updatePcList();
+                updateDrawStatus();
+              }
+            }
+          }
+          return;
+        }
 
         if (S.tool === "draw") {
           if (dbl && S.drawPts.length >= 3) {
@@ -3263,8 +3637,9 @@
         document.getElementById("split-badge").style.background = "var(--g)";
         updateDrawStatus();
         setStep(2);
+        const aDisp = polyArea(S.outerGeo) * S.measScale * S.measScale;
         logA(
-          `Outer polygon drawn (${S.outerGeo.length} vertices, area ${polyArea(S.outerGeo).toFixed(1)} m²)`,
+          `Outer polygon drawn (${S.outerGeo.length} vertices, area ${aDisp.toFixed(1)} m²)`,
         );
         toast("Polygon closed — set N and Split", "ok");
         draw();
@@ -3275,6 +3650,7 @@
         S.drawDone = false;
         S.outerGeo = null;
         S.topo = null;
+        S.lockedEdges = [];
         document.getElementById("btn-split").disabled = true;
         document.getElementById("split-badge").textContent = "needs polygon";
         document.getElementById("split-badge").style.background = "";
@@ -3293,7 +3669,8 @@
         const bcl = document.getElementById("btn-clear-draw");
         const n = S.drawPts.length;
         if (S.drawDone && S.outerGeo) {
-          el.innerHTML = `<b>✓ Polygon ready</b> (${S.outerGeo.length} vertices, ${polyArea(S.outerGeo).toFixed(1)} m²)<br>Now set N and click <b>Split</b>.`;
+          const aDisp = polyArea(S.outerGeo) * S.measScale * S.measScale;
+          el.innerHTML = `<b>✓ Polygon ready</b> (${S.outerGeo.length} vertices, ${aDisp.toFixed(1)} m²)<br>Now set N and click <b>Split</b>.`;
           el.classList.add("done");
           bcl.disabled = false;
         } else if (n === 0) {
@@ -3370,8 +3747,9 @@
           select: "on",
           "edit-outer": "on-y",
           "edit-bg": "on",
+          calibrate: "on-p",
         };
-        ["pan", "draw", "select", "edit-outer", "edit-bg"].forEach((n) => {
+        ["pan", "draw", "select", "edit-outer", "edit-bg", "calibrate"].forEach((n) => {
           const b = document.getElementById(`tool-${n}`);
           if (!b) return;
           b.classList.remove("on", "on-p", "on-g", "on-y");
@@ -3439,9 +3817,21 @@
         try {
           const geo = JSON.parse(raw);
           S.topo = buildTopo(geo);
+          
+          const m = S.measScale || 1;
+          S.topo.vertices.forEach(v => {
+            v.x /= m;
+            v.y /= m;
+          });
+          S.topo.outer.forEach(v => {
+            v.x /= m;
+            v.y /= m;
+          });
+          
           S.outerGeo = S.topo.outer;
           S.drawDone = false;
           S.drawPts = [];
+          S.lockedEdges = [];
           document.getElementById("btn-split").disabled = false;
           document.getElementById("hint").style.opacity = "0";
           closeModal();
@@ -3459,14 +3849,15 @@
           toast("Nothing to export", "er");
           return;
         }
-        const outerRing = S.topo.outer.map((v) => [v.x, v.y]);
+        const m = S.measScale || 1;
+        const outerRing = S.topo.outer.map((v) => [v.x * m, v.y * m]);
         outerRing.push(outerRing[0]);
         const geo = {
           outer: { type: "Polygon", coordinates: [outerRing] },
           parcels: S.topo.parcels.map((p) => {
             const ring = p.vids.map((i) => [
-              S.topo.vertices[i].x,
-              S.topo.vertices[i].y,
+              S.topo.vertices[i].x * m,
+              S.topo.vertices[i].y * m,
             ]);
             ring.push(ring[0]);
             return { type: "Polygon", coordinates: [ring] };
@@ -3480,6 +3871,32 @@
         a.download = "parcels.geojson";
         a.click();
         toast("Exported", "ok");
+      }
+
+      function exportImage() {
+        const link = document.createElement("a");
+        link.download = "map_export.png";
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+        toast("Image exported", "ok");
+      }
+
+      function toggleMeas(type, idx, kind) {
+        if (type === 'outer') {
+          if (kind === 'len') S.showOuterLen = S.showOuterLen === false ? true : false;
+          if (kind === 'ang') S.showOuterAng = S.showOuterAng === false ? true : false;
+        } else if (type === 'pc') {
+          if (kind === 'len') {
+            if (!S.showPcLen) S.showPcLen = {};
+            S.showPcLen[idx] = S.showPcLen[idx] === false ? true : false;
+          }
+          if (kind === 'ang') {
+            if (!S.showPcAng) S.showPcAng = {};
+            S.showPcAng[idx] = S.showPcAng[idx] === false ? true : false;
+          }
+        }
+        draw();
+        updatePcList();
       }
 
       // ══════════════════════════════════════════════════════
@@ -3520,6 +3937,16 @@
         }
 
         const url = document.getElementById("api-url").value.replace(/\/$/, "");
+        
+        let movable_edges = null;
+        if (S.lockedEdges && S.lockedEdges.length > 0) {
+          movable_edges = S.lockedEdges.map(le => ({
+            v0: [S.topo.vertices[le.v1].x, S.topo.vertices[le.v1].y],
+            v1: [S.topo.vertices[le.v2].x, S.topo.vertices[le.v2].y],
+            movable: false
+          }));
+        }
+        
         const payload = {
           geojson: {
             outer: {
@@ -3540,6 +3967,7 @@
             }),
           },
           all_interior_movable: S.allMovable,
+          movable_edges: movable_edges,
           max_iter: +document.getElementById("max-iter").value || 200,
           tol: +document.getElementById("tol").value || 1e-8,
           target_areas: ta,
@@ -3602,9 +4030,17 @@
         const mainDiv = document.getElementById("main-pc-info");
         if (mainDiv) {
           if (S.outerGeo) {
-            const a = polyArea(S.outerGeo);
+            const a = polyArea(S.outerGeo) * S.measScale * S.measScale;
+            const showLen = S.showOuterLen !== false;
+            const showAng = S.showOuterAng !== false;
             mainDiv.innerHTML = `<div style="background:var(--bg3); padding:10px; border-radius:6px; font-size:12px; border:1px solid var(--border);">
-              <strong style="color:var(--accent); font-size: 13px;">Main Polygon</strong><br>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong style="color:var(--accent); font-size: 13px;">Main Polygon</strong>
+                <div>
+                  <span style="cursor:pointer; font-size: 13px; margin-right: 4px; opacity: ${showLen ? 1 : 0.3}" onclick="toggleMeas('outer', null, 'len')" title="Toggle Lengths">📏</span>
+                  <span style="cursor:pointer; font-size: 13px; opacity: ${showAng ? 1 : 0.3}" onclick="toggleMeas('outer', null, 'ang')" title="Toggle Angles">📐</span>
+                </div>
+              </div>
               <div style="margin-top: 6px;">Area: <span style="color:var(--t1)">${a.toFixed(2)} m²</span></div>
               <div style="margin-top: 3px;">Vertices: <span style="color:var(--t1)">${S.outerGeo.length}</span></div>
             </div>`;
@@ -3623,12 +4059,15 @@
         }
 
         const tot = totalArea();
+        const totDisp = tot * S.measScale * S.measScale;
         div.innerHTML = "";
-        document.getElementById("hdr-a").textContent = `${tot.toFixed(1)} m²`;
+        document.getElementById("hdr-a").textContent = `${totDisp.toFixed(1)} m²`;
         document.getElementById("hdr-n").textContent = S.topo.parcels.length;
         S.topo.parcels.forEach((p, i) => {
           const ta = targetArea(i);
           const a = pArea(p);
+          const taDisp = ta * S.measScale * S.measScale;
+          const aDisp = a * S.measScale * S.measScale;
           const ep = ta > 0 ? ((a - ta) / ta) * 100 : 0;
           const abs = Math.abs(ep);
           const ec = abs < 0.1 ? "eg" : abs < 2 ? "ew" : "eb";
@@ -3652,8 +4091,19 @@
               _origDraw();
             }
           };
-          el.innerHTML = `<div class="pch"><div class="pcd" style="background:${p.color}"></div><div class="pcn">${p.label}</div></div>
-<div class="pca">${a.toFixed(2)} m² <span style="color:var(--t3)">→ ${ta.toFixed(1)}</span></div>
+          const showPLen = (!S.showPcLen || S.showPcLen[i] !== false);
+          const showPAng = (!S.showPcAng || S.showPcAng[i] !== false);
+          el.innerHTML = `<div class="pch" style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+  <div style="display:flex; align-items:center;">
+    <div class="pcd" style="background:${p.color}"></div>
+    <div class="pcn">${p.label}</div>
+  </div>
+  <div>
+    <span style="cursor:pointer; font-size: 13px; margin-right: 4px; opacity: ${showPLen ? 1 : 0.3}" onclick="event.stopPropagation(); toggleMeas('pc', ${i}, 'len')" title="Toggle lengths">📏</span>
+    <span style="cursor:pointer; font-size: 13px; opacity: ${showPAng ? 1 : 0.3}" onclick="event.stopPropagation(); toggleMeas('pc', ${i}, 'ang')" title="Toggle angles">📐</span>
+  </div>
+</div>
+<div class="pca">${aDisp.toFixed(2)} m² <span style="color:var(--t3)">→ ${taDisp.toFixed(1)}</span></div>
 <div class="pce ${ec}">${ep >= 0 ? "+" : ""}${ep.toFixed(2)}%</div>
 <div class="pb"><div class="pf" style="width:${bar}%;background:${p.color}"></div></div>`;
           div.appendChild(el);
@@ -3703,6 +4153,7 @@
         S.dragVtx = null;
         S.dragEdge = null;
         S.hoverEdge = null;
+        S.lockedEdges = [];
         document.getElementById("btn-split").disabled = true;
         document.getElementById("split-badge").textContent = "needs polygon";
         document.getElementById("split-badge").style.background = "";
