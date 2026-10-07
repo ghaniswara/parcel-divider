@@ -868,14 +868,12 @@
               </div>
             </div>
             <div class="fr">
-              <label>Custom target areas JSON</label>
-              <textarea
-                id="ta-json"
-                placeholder='{"0":"10%","1":"45%","2":"45%"}'
-              ></textarea>
-              <button class="btn btn-g" style="width: 100%; margin-top: 4px;" onclick="applyTargetAreas()">
-                🔄 Update Target Labels
-              </button>
+              <label>Target areas</label>
+              <div style="font-size:11px;color:var(--t2);line-height:1.5">
+                Set each parcel's target share with the <b>Tgt %</b> field in
+                its card (Parcels tab). Unset parcels split the remainder
+                equally.
+              </div>
             </div>
 
             <div class="brow" style="margin-bottom: 7px">
@@ -912,17 +910,9 @@
               <label>Outer Lengths</label>
               <div class="tog" onclick="tog(this, 'showOuterLen')"></div>
             </div>
-            <div class="tr" style="margin-bottom: 4px">
+            <div class="tr" style="margin-bottom: 8px">
               <label>Outer Angles</label>
               <div class="tog" onclick="tog(this, 'showOuterAng')"></div>
-            </div>
-            <div class="tr" style="margin-bottom: 4px">
-              <label>Parcel Lengths</label>
-              <div class="tog" onclick="tog(this, 'showParcelLen')"></div>
-            </div>
-            <div class="tr" style="margin-bottom: 8px">
-              <label>Parcel Angles</label>
-              <div class="tog" onclick="tog(this, 'showParcelAng')"></div>
             </div>
             <div class="fr">
               <label>Grid Opacity</label>
@@ -938,6 +928,30 @@
                   draw();
                 "
               />
+            </div>
+            <div class="fr">
+              <label>Label Opacity</label>
+              <input
+                id="lbl-op"
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value="0.8"
+                oninput="
+                  S.lblOpacity = parseFloat(this.value);
+                  draw();
+                "
+              />
+            </div>
+            <div class="fr">
+              <label>Label Position</label>
+              <div style="font-size:11px;color:var(--t2);line-height:1.5">
+                Switch to <b>Pan</b> mode, hover a label until the cursor
+                turns into a hand, then <b>drag</b> it anywhere. Works for
+                the name/area label, edge lengths, and corner angles. Saved
+                with the project.
+              </div>
             </div>
             <div class="brow">
               <button
@@ -1069,6 +1083,27 @@
             </div>
           </div>
 
+          <!-- PROJECT -->
+          <div class="sec">
+            <div class="sh">Project</div>
+            <div class="brow">
+              <button class="btn btn-p" onclick="saveProject()">💾 Save</button>
+              <button
+                class="btn btn-g"
+                onclick="document.getElementById('proj-file').click()"
+              >
+                📂 Load
+              </button>
+              <input
+                type="file"
+                id="proj-file"
+                accept=".json,application/json"
+                style="display: none"
+                onchange="loadProject(this)"
+              />
+            </div>
+          </div>
+
           <!-- IMPORT / EXPORT -->
           <div class="sec">
             <div class="sh">Import / Export</div>
@@ -1091,6 +1126,13 @@
             </button>
             <button class="tb on-p" id="tool-draw" onclick="setTool('draw')">
               ✏ Draw
+            </button>
+            <button
+              class="tb"
+              id="tool-draw-parcel"
+              onclick="setTool('draw-parcel')"
+            >
+              ▭ Draw Parcel
             </button>
             <button
               class="tb"
@@ -1135,6 +1177,92 @@
           </div>
           <div class="tc on" id="tab-parcels">
             <div id="main-pc-info" style="margin-bottom: 8px"></div>
+            <div
+              id="tgt-info"
+              style="
+                display: none;
+                background: var(--bg3);
+                border: 1px solid var(--border);
+                border-radius: var(--rad);
+                padding: 7px 10px;
+                margin-bottom: 8px;
+              "
+            >
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: baseline;
+                "
+              >
+                <span style="font-size: 10px; color: var(--t2)"
+                  >Target allocation</span
+                >
+                <span
+                  id="tgt-total"
+                  style="
+                    font-family: 'JetBrains Mono', monospace;
+                    font-size: 12px;
+                    font-weight: 600;
+                  "
+                  >100.0%</span
+                >
+              </div>
+              <div
+                style="
+                  height: 4px;
+                  background: var(--bg);
+                  border-radius: 2px;
+                  margin-top: 5px;
+                  overflow: hidden;
+                "
+              >
+                <div
+                  id="tgt-fill"
+                  style="
+                    height: 100%;
+                    width: 100%;
+                    background: var(--g);
+                    border-radius: 2px;
+                    transition: width 0.3s ease, background 0.3s ease;
+                  "
+                ></div>
+              </div>
+              <div
+                id="tgt-msg"
+                style="font-size: 10px; margin-top: 4px; color: var(--t2)"
+              >
+                Fully allocated
+              </div>
+            </div>
+            <div
+              id="pc-actions"
+              style="
+                display: none;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                background: var(--bg3);
+                padding: 7px 10px;
+                border-radius: var(--rad);
+                border: 1px solid var(--border);
+                margin-bottom: 8px;
+              "
+            >
+              <span
+                id="pc-sel-count"
+                style="font-size: 10px; color: var(--t2)"
+                >Shift+click parcels to multi-select</span
+              >
+              <button
+                class="btn btn-p"
+                id="btn-combine"
+                onclick="combineParcels()"
+                disabled
+                style="padding: 4px 10px; font-size: 11px"
+                >⧉ Combine</button
+              >
+            </div>
             <div id="pc-list">
               <p style="color: var(--t3); font-size: 11px">No parcels yet.</p>
             </div>
@@ -1477,8 +1605,9 @@
         drawDone: false, // polygon closed
         showOuterLen: false,
         showOuterAng: false,
-        showParcelLen: false,
-        showParcelAng: false,
+        showPcLen: {},
+        showPcAng: {},
+        targetPcts: {},
         hoveredParcelId: null,
         // Drag / Select (Independent for outer vs topo)
         selVtxs: [], // array of {type:'topo'|'outer', id}
@@ -1490,7 +1619,7 @@
         dragEdge: null,
         hoverEdge: null,
         dragPan: null,
-        selParcel: null,
+        selParcels: [],
         // Toggles
         dragMode: true,
         liveEq: false,
@@ -1498,6 +1627,10 @@
         measScale: 1,
         lockedEdges: [],
         gridOpacity: 1.0,
+        lblOpacity: 0.8,
+        labelPos: {},
+        labelHits: [],
+        dragLbl: null,
         // Background
         bgImage: null,
         bg: { x: 0, y: 0, scale: 1, rot: 0, opacity: 0.5 },
@@ -2106,6 +2239,127 @@
         updateVtxTools();
       }
 
+      function combineParcels() {
+        if (!S.topo || S.selParcels.length < 2) {
+          toast("Select at least 2 parcels to combine", "er");
+          return;
+        }
+        const sel = [...new Set(S.selParcels)].sort((a, b) => a - b);
+        const selSet = new Set(sel);
+
+        const dirCount = new Map();
+        const undirected = new Map();
+        sel.forEach((idx) => {
+          const p = S.topo.parcels[idx];
+          const n = p.vids.length;
+          for (let k = 0; k < n; k++) {
+            const a = p.vids[k];
+            const b = p.vids[(k + 1) % n];
+            dirCount.set(`${a}|${b}`, (dirCount.get(`${a}|${b}`) || 0) + 1);
+            const uk = a < b ? `${a}|${b}` : `${b}|${a}`;
+            if (!undirected.has(uk)) undirected.set(uk, { a, b });
+          }
+        });
+
+        const boundary = [];
+        undirected.forEach(({ a, b }) => {
+          const total =
+            (dirCount.get(`${a}|${b}`) || 0) + (dirCount.get(`${b}|${a}`) || 0);
+          if (total === 1) boundary.push({ a, b });
+        });
+
+        if (boundary.length < 3) {
+          toast("Cannot combine: no shared boundary found", "er");
+          return;
+        }
+
+        const next = new Map();
+        for (const { a, b } of boundary) {
+          if (next.has(a)) {
+            toast("Cannot combine: parcels touch at a point only", "er");
+            return;
+          }
+          next.set(a, b);
+        }
+
+        const start = boundary[0].a;
+        const ring = [start];
+        let cur = next.get(start);
+        while (cur !== start) {
+          if (cur === undefined || ring.length > boundary.length) {
+            toast("Cannot combine: selection must form one contiguous region", "er");
+            return;
+          }
+          ring.push(cur);
+          cur = next.get(cur);
+        }
+        if (ring.length !== boundary.length) {
+          toast("Cannot combine: selection must form one contiguous region", "er");
+          return;
+        }
+
+        const first = sel[0];
+        const combined = {
+          vids: ring,
+          color: S.topo.parcels[first].color,
+          label: S.topo.parcels[first].label,
+        };
+        const newParcels = [];
+        S.topo.parcels.forEach((p, i) => {
+          if (i === first) newParcels.push(combined);
+          else if (!selSet.has(i)) newParcels.push(p);
+        });
+
+        const used = new Set();
+        newParcels.forEach((p) => p.vids.forEach((v) => used.add(v)));
+        const remap = new Map();
+        const newVertices = [];
+        S.topo.vertices.forEach((v, i) => {
+          if (used.has(i)) {
+            remap.set(i, newVertices.length);
+            newVertices.push(v);
+          }
+        });
+        newParcels.forEach((p) => {
+          p.vids = p.vids.map((v) => remap.get(v));
+        });
+
+        const parcelEdges = new Set();
+        newParcels.forEach((p) => {
+          const n = p.vids.length;
+          for (let k = 0; k < n; k++) {
+            const a = p.vids[k];
+            const b = p.vids[(k + 1) % n];
+            parcelEdges.add(a < b ? `${a}|${b}` : `${b}|${a}`);
+          }
+        });
+        S.lockedEdges = (S.lockedEdges || [])
+          .map((le) => ({ v1: remap.get(le.v1), v2: remap.get(le.v2) }))
+          .filter(
+            (le) =>
+              le.v1 !== undefined &&
+              le.v2 !== undefined &&
+              parcelEdges.has(
+                le.v1 < le.v2 ? `${le.v1}|${le.v2}` : `${le.v2}|${le.v1}`,
+              ),
+          );
+
+        S.topo.vertices = newVertices;
+        S.topo.parcels = newParcels;
+        S.selParcels = [newParcels.indexOf(combined)];
+        S.selVtxs = [];
+        S.selEdges = [];
+
+        const aDisp = pArea(combined) * S.measScale * S.measScale;
+        logOk(
+          `Combined ${sel.length} parcels → ${combined.label} (${aDisp.toFixed(1)} m²)`,
+        );
+        toast(`${sel.length} parcels combined`, "ok");
+        draw();
+        updatePcList();
+        updateVtxTools();
+      }
+
       window.addEventListener("keydown", (e) => {
         if (
           e.target.tagName === "INPUT" ||
@@ -2250,6 +2504,7 @@
             bL.innerHTML = "🔒 Lock";
           }
         }
+        syncCombineUI();
       }
 
       function drawGrid() {
@@ -2472,11 +2727,12 @@
 
       function drawTopo() {
         const drawnEdges = new Set();
+        S.labelHits = [];
         S.topo.parcels.forEach((p, i) => {
           const ta = targetArea(i);
           const a = pArea(p);
           const ep = ta > 0 ? ((a - ta) / ta) * 100 : 0;
-          const sel = S.selParcel === i;
+          const sel = S.selParcels.includes(i);
 
           ctx.save();
           ctx.beginPath();
@@ -2506,10 +2762,10 @@
           ctx.stroke();
           ctx.restore();
 
-          drawLbl(p, a, ta);
+          drawLbl(p, a, ta, i);
 
-          const showMLen = S.showParcelLen || S.hoveredParcelId === i;
-          const showMAng = S.showParcelAng || S.hoveredParcelId === i;
+          const showMLen = S.showPcLen[i] || S.hoveredParcelId === i;
+          const showMAng = S.showPcAng[i] || S.hoveredParcelId === i;
           if (showMLen || showMAng) {
             ctx.save();
             ctx.font = `500 ${Math.max(9, S.zoom * 0.4)}px JetBrains Mono`;
@@ -2549,16 +2805,18 @@
               if (signedArea < 0) { nx = dy; ny = -dx; }
               const nlen = Math.hypot(nx, ny) || 1;
               nx /= nlen; ny /= nlen;
-              const tx = smx - nx * 18;
-              const ty = smy + ny * 18;
+              const edgeKey = Math.min(p.vids[k], p.vids[(k + 1) % nV]) + "-" + Math.max(p.vids[k], p.vids[(k + 1) % nV]);
+              const loff = S.labelPos["l" + edgeKey] || { x: 0, y: 0 };
+              const tx = smx - nx * 18 + loff.x;
+              const ty = smy + ny * 18 + loff.y;
 
               const txtLen = `${(len * S.measScale).toFixed(2)}m`;
               const wLen = ctx.measureText(txtLen).width;
-              
-              const edgeKey = Math.min(p.vids[k], p.vids[(k + 1) % nV]) + "-" + Math.max(p.vids[k], p.vids[(k + 1) % nV]);
-              const showMLen = S.showParcelLen || S.hoveredParcelId === i;
+
+              const showMLen = S.showPcLen[i] || S.hoveredParcelId === i;
               if (showMLen && !drawnEdges.has(edgeKey)) {
                 drawnEdges.add(edgeKey);
+                S.labelHits.push({ key: "l" + edgeKey, x: tx - wLen / 2 - 3, y: ty - 7, w: wLen + 6, h: 14 });
                 ctx.fillStyle = "#0d1117cc";
                 ctx.fillRect(tx - wLen / 2 - 3, ty - 7, wLen + 6, 14);
                 ctx.fillStyle = "#58a6ff";
@@ -2579,14 +2837,17 @@
               const vx = cx - vB.x,
                 vy = cy - vB.y;
               const vlen = Math.hypot(vx, vy) || 1;
-              const ox = sbx + (vx / vlen) * 22;
-              const oy = sby - (vy / vlen) * 22;
+              const akey = "a" + p.vids[(k + 1) % nV];
+              const aoff = S.labelPos[akey] || { x: 0, y: 0 };
+              const ox = sbx + (vx / vlen) * 22 + aoff.x;
+              const oy = sby - (vy / vlen) * 22 + aoff.y;
 
               const txtAng = `${Math.round(angle)}°`;
               const wAng = ctx.measureText(txtAng).width;
-              
-              const showMAng = S.showParcelAng || S.hoveredParcelId === i;
+
+              const showMAng = S.showPcAng[i] || S.hoveredParcelId === i;
               if (showMAng) {
+                S.labelHits.push({ key: akey, x: ox - wAng / 2 - 3, y: oy - 7, w: wAng + 6, h: 14 });
                 ctx.fillStyle = "#0d1117cc";
                 ctx.fillRect(ox - wAng / 2 - 3, oy - 7, wAng + 6, 14);
                 ctx.fillStyle = "#d29922";
@@ -2598,7 +2859,7 @@
         });
       }
 
-      function drawLbl(p, a, ta) {
+      function drawLbl(p, a, ta, idx) {
         let cx = 0,
           cy = 0;
         const n = p.vids.length;
@@ -2608,8 +2869,12 @@
         });
         cx /= n;
         cy /= n;
-        const [sx, sy] = w2s(cx, cy);
+        const [nsx, nsy] = w2s(cx, cy);
+        const off = S.labelPos["p" + idx] || { x: 0, y: 0 };
+        const sx = nsx + off.x;
+        const sy = nsy + off.y;
         const fs = Math.max(9, Math.min(13, S.zoom * 1.6));
+        const lo = S.lblOpacity;
         ctx.save();
         ctx.font = `500 ${fs}px Inter`;
         ctx.textAlign = "center";
@@ -2623,13 +2888,15 @@
         ];
         const lh = fs + 3;
         const totH = lines.length * lh;
+        let maxW = 0;
         lines.forEach((txt, i) => {
           const y = sy - totH / 2 + i * lh + lh / 2;
           const w = ctx.measureText(txt).width;
-          ctx.globalAlpha = 0.8;
+          if (w > maxW) maxW = w;
+          ctx.globalAlpha = 0.8 * lo;
           ctx.fillStyle = "#0d1117";
           ctx.fillRect(sx - w / 2 - 3, y - lh / 2, w + 6, lh);
-          ctx.globalAlpha = 1;
+          ctx.globalAlpha = lo;
           const col =
             i === 2
               ? Math.abs(ep) < 0.1
@@ -2642,6 +2909,16 @@
           ctx.fillText(txt, sx, y);
         });
         ctx.restore();
+        S.labelHits.push({ key: "p" + idx, x: sx - maxW / 2 - 3, y: sy - totH / 2, w: maxW + 6, h: totH });
+      }
+
+      function hitLbl(sx, sy) {
+        for (let i = S.labelHits.length - 1; i >= 0; i--) {
+          const b = S.labelHits[i];
+          if (sx >= b.x && sx <= b.x + b.w && sy >= b.y && sy <= b.y + b.h)
+            return b;
+        }
+        return null;
       }
 
       function drawLockedEdges() {
@@ -2899,60 +3176,94 @@
         if (!S.topo) return 0;
         return S.topo.parcels.reduce((s, p) => s + pArea(p), 0);
       }
-      function applyTargetAreas() {
-        if (!S.topo) {
-          toast("No parcels available", "er");
-          return;
-        }
-        const taRaw = document.getElementById("ta-json").value.trim();
-        if (taRaw) {
-          try {
-            JSON.parse(taRaw);
-            toast("Targets updated", "ok");
-          } catch {
-            toast("Invalid JSON format", "er");
-            return;
-          }
-        }
-        draw();
-        updatePcList();
-      }
-
       function getTargetAreas() {
         if (!S.topo) return null;
-        const taRaw = document.getElementById("ta-json").value.trim();
-        if (!taRaw) return null;
-        try {
-          const parsed = JSON.parse(taRaw);
-          const tot = totalArea();
-          const ta = {};
-          let sumTa = 0;
-          for (let k in parsed) {
-            let val = parsed[k];
-            if (typeof val === "string" && val.endsWith("%")) {
-              val = (parseFloat(val.replace("%", "")) / 100) * tot;
-            } else {
-              val = parseFloat(val) / (S.measScale * S.measScale);
-            }
-            ta[k] = val;
-            sumTa += val;
-          }
-          // Normalize to ensure targets exactly sum to the total area
-          if (sumTa > 0) {
-            for (let k in ta) {
-              ta[k] = ta[k] * (tot / sumTa);
-            }
-          }
-          return ta;
-        } catch {
-          return null;
-        }
+        const hasCustom = Object.keys(S.targetPcts).some(
+          (k) => S.targetPcts[k] != null && !isNaN(S.targetPcts[k]) && S.targetPcts[k] > 0,
+        );
+        if (!hasCustom) return null;
+        const ta = {};
+        for (let i = 0; i < S.topo.parcels.length; i++) ta[i] = targetArea(i);
+        return ta;
       }
       function targetArea(i) {
         if (!S.topo) return 0;
-        const tas = getTargetAreas();
-        if (tas && tas[i] !== undefined && !isNaN(tas[i])) return tas[i];
-        return totalArea() / S.topo.parcels.length;
+        const tot = totalArea();
+        const n = S.topo.parcels.length;
+        const v = S.targetPcts[i];
+        if (v != null && !isNaN(v) && v > 0) return (v / 100) * tot;
+        return tot / n;
+      }
+      function setTargetPct(i, val, live) {
+        if (!S.topo) return;
+        const v = parseFloat(val);
+        if (isNaN(v) || v <= 0) delete S.targetPcts[i];
+        else S.targetPcts[i] = v;
+        _origDraw();
+        refreshTargets();
+        if (!live) updatePcList();
+      }
+      function refreshTargets() {
+        if (!S.topo) return;
+        const tot = totalArea();
+        const n = S.topo.parcels.length;
+        S.topo.parcels.forEach((p, i) => {
+          const ta = targetArea(i);
+          const a = pArea(p);
+          const taDisp = ta * S.measScale * S.measScale;
+          const ep = ta > 0 ? ((a - ta) / ta) * 100 : 0;
+          const abs = Math.abs(ep);
+          const ec = abs < 0.1 ? "eg" : abs < 2 ? "ew" : "eb";
+          const bar = Math.min(100, (a / (tot / n)) * 50);
+          const taEl = document.getElementById(`pc-ta-${i}`);
+          if (taEl) taEl.textContent = taDisp.toFixed(1);
+          const epEl = document.getElementById(`pc-ep-${i}`);
+          if (epEl) {
+            epEl.className = `pce ${ec}`;
+            epEl.textContent = `${ep >= 0 ? "+" : ""}${ep.toFixed(2)}%`;
+          }
+          const barEl = document.getElementById(`pc-bar-${i}`);
+          if (barEl) barEl.style.width = `${bar}%`;
+        });
+        refreshTgtInfo();
+      }
+      function refreshTgtInfo() {
+        const panel = document.getElementById("tgt-info");
+        if (!panel) return;
+        if (!S.topo) {
+          panel.style.display = "none";
+          return;
+        }
+        panel.style.display = "block";
+        const n = S.topo.parcels.length;
+        let assigned = 0;
+        for (let i = 0; i < n; i++) {
+          const v = S.targetPcts[i];
+          assigned += v != null && !isNaN(v) && v > 0 ? v : 100 / n;
+        }
+        const remaining = 100 - assigned;
+        const over = remaining < -0.05;
+        const totEl = document.getElementById("tgt-total");
+        const fill = document.getElementById("tgt-fill");
+        const msg = document.getElementById("tgt-msg");
+        if (totEl) totEl.textContent = `${assigned.toFixed(1)}%`;
+        if (fill) {
+          fill.style.width = `${Math.max(0, Math.min(100, assigned))}%`;
+          fill.style.background = over ? "var(--r)" : "var(--g)";
+        }
+        if (totEl) totEl.style.color = over ? "var(--r)" : "var(--t1)";
+        if (msg) {
+          if (over) {
+            msg.style.color = "var(--r)";
+            msg.textContent = `${Math.abs(remaining).toFixed(1)}% over-allocated — you assigned more than the available land area`;
+          } else if (remaining > 0.05) {
+            msg.style.color = "var(--y)";
+            msg.textContent = `${remaining.toFixed(1)}% remaining — unassigned land`;
+          } else {
+            msg.style.color = "var(--t2)";
+            msg.textContent = "Fully allocated";
+          }
+        }
       }
 
       // ══════════════════════════════════════════════════════
@@ -3052,8 +3363,11 @@
         };
 
         S.topo = buildTopo(geo);
-        S.selParcel = null;
+        S.selParcels = [];
         S.selVtxs = [];
+        S.showPcLen = {};
+        S.showPcAng = {};
+        S.targetPcts = {};
         setStep(3);
         document.getElementById("hint").style.opacity = "0";
         logA(
@@ -3271,6 +3585,15 @@
           return;
         }
 
+        // Dragging a label
+        if (S.dragLbl) {
+          const o = S.labelPos[S.dragLbl.key];
+          o.x = S.dragLbl.ox + (sx - S.dragLbl.sx);
+          o.y = S.dragLbl.oy + (sy - S.dragLbl.sy);
+          draw();
+          return;
+        }
+
         // Panning
         if (S.dragPan) {
           S.pan.x = S.dragPan.px - (e.clientX - S.dragPan.sx) / S.zoom;
@@ -3311,14 +3634,17 @@
           S.hoverEdge = hitEdge(sx, sy);
         }
 
+        const lblHit = S.tool === "pan" ? hitLbl(sx, sy) : null;
         canvas.style.cursor =
           S.tool === "calibrate" && S.hoverEdge
             ? "pointer"
-            : S.hoverVtx || S.hoverEdge
+            : lblHit
               ? "grab"
-              : S.tool === "draw"
-                ? "crosshair"
-                : "default";
+              : S.hoverVtx || S.hoverEdge
+                ? "grab"
+                : S.tool === "draw" || S.tool === "draw-parcel"
+                  ? "crosshair"
+                  : "default";
 
         const edgeStr = S.hoverEdge
           ? S.hoverEdge.type === "topo"
@@ -3331,7 +3657,7 @@
             : `o${prevE.i1},o${prevE.i2}`
           : "";
         if (!sameVtx(S.hoverVtx, prevVtx) || edgeStr !== prevEdgeStr) draw();
-        else if (S.tool === "draw") draw();
+        else if (S.tool === "draw" || S.tool === "draw-parcel") draw();
       });
 
       canvas.addEventListener("mousedown", (e) => {
@@ -3340,7 +3666,7 @@
           sy = e.clientY - r.top;
         const [wx, wy] = s2w(sx, sy);
 
-        if (S.tool === "draw") {
+        if (S.tool === "draw" || S.tool === "draw-parcel") {
           return;
         }
 
@@ -3466,6 +3792,21 @@
             return;
           }
         }
+        if (S.tool === "pan") {
+          const hb = hitLbl(sx, sy);
+          if (hb) {
+            if (!S.labelPos[hb.key]) S.labelPos[hb.key] = { x: 0, y: 0 };
+            S.dragLbl = {
+              key: hb.key,
+              sx,
+              sy,
+              ox: S.labelPos[hb.key].x,
+              oy: S.labelPos[hb.key].y,
+            };
+            canvas.style.cursor = "grabbing";
+            return;
+          }
+        }
         S.dragPan = { sx: e.clientX, sy: e.clientY, px: S.pan.x, py: S.pan.y };
         canvas.style.cursor = "grabbing";
       });
@@ -3476,6 +3817,7 @@
         S.dragVtx = null;
         S.dragPan = null;
         S.dragEdge = null;
+        S.dragLbl = null;
         S.selVtxsInit = null;
         S.dragBg = null;
         canvas.style.cursor = "default";
@@ -3538,17 +3880,18 @@
           return;
         }
 
-        if (S.tool === "draw") {
+        if (S.tool === "draw" || S.tool === "draw-parcel") {
+          const isParcel = S.tool === "draw-parcel";
           if (dbl && S.drawPts.length >= 3) {
-            closeDraw();
+            isParcel ? closeDrawParcel() : closeDraw();
             return;
           }
           if (S.drawPts.length >= 3 && nearStart({ x: wx, y: wy })) {
-            closeDraw();
+            isParcel ? closeDrawParcel() : closeDraw();
             return;
           }
           S.drawPts.push({ x: wx, y: wy });
-          updateDrawStatus();
+          if (!isParcel) updateDrawStatus();
           draw();
           return;
         }
@@ -3601,13 +3944,26 @@
             }
           }
           if (S.tool === "select" && !hitVtx(sx, sy)) {
+            let hit = -1;
             S.topo?.parcels.forEach((p, i) => {
-              if (pip(wx, wy, p)) {
-                S.selParcel = i;
-                draw();
-                hiPc(i);
-              }
+              if (hit < 0 && pip(wx, wy, p)) hit = i;
             });
+            const additive = e.shiftKey || e.ctrlKey || e.metaKey;
+            if (hit >= 0) {
+              if (additive) {
+                const k = S.selParcels.indexOf(hit);
+                if (k >= 0) S.selParcels.splice(k, 1);
+                else S.selParcels.push(hit);
+              } else {
+                S.selParcels = [hit];
+              }
+              draw();
+              hiPc();
+            } else if (!additive && S.selParcels.length) {
+              S.selParcels = [];
+              draw();
+              hiPc();
+            }
           }
         }
       });
@@ -3645,11 +4001,143 @@
         draw();
       }
 
+      function insertVidOnParcelEdges(vid) {
+        const v = S.topo.vertices[vid];
+        S.topo.parcels.forEach((p) => {
+          if (p.vids.includes(vid)) return;
+          for (let i = 0; i < p.vids.length; i++) {
+            const a = p.vids[i],
+              b = p.vids[(i + 1) % p.vids.length];
+            const A = S.topo.vertices[a],
+              B = S.topo.vertices[b];
+            const abx = B.x - A.x,
+              aby = B.y - A.y;
+            const l2 = abx * abx + aby * aby;
+            if (l2 === 0) continue;
+            const t = ((v.x - A.x) * abx + (v.y - A.y) * aby) / l2;
+            if (t <= 1e-9 || t >= 1 - 1e-9) continue;
+            const px = A.x + t * abx,
+              py = A.y + t * aby;
+            if (Math.hypot(v.x - px, v.y - py) < 1e-6 * Math.sqrt(l2)) {
+              p.vids.splice(i + 1, 0, vid);
+              break;
+            }
+          }
+        });
+      }
+
+      function closeDrawParcel() {
+        if (S.drawPts.length < 3) {
+          toast("Need at least 3 points", "er");
+          return;
+        }
+        const PREC = 1e7;
+        const pts = S.drawPts.map((p) => ({ x: p.x, y: p.y }));
+        S.drawPts = [];
+        const ring = (arr) => {
+          const r = arr.map((p) => [p.x, p.y]);
+          r.push(r[0]);
+          return r;
+        };
+
+        if (!S.topo) {
+          const outerPts = S.outerGeo
+            ? S.outerGeo.map((p) => ({ x: p.x, y: p.y }))
+            : pts.map((p) => ({ x: p.x, y: p.y }));
+          const geo = {
+            outer: { type: "Polygon", coordinates: [ring(outerPts)] },
+            parcels: [{ type: "Polygon", coordinates: [ring(pts)] }],
+          };
+          S.topo = buildTopo(geo);
+          S.outerGeo = S.topo.outer;
+          S.drawDone = true;
+          document.getElementById("btn-split").disabled = false;
+          document.getElementById("split-badge").textContent = "ready ✓";
+          document.getElementById("split-badge").style.background = "var(--g)";
+          document.getElementById("hint").style.opacity = "0";
+          S.selParcels = [0];
+          setStep(3);
+          updateDrawStatus();
+          const aDisp =
+            pArea(S.topo.parcels[0]) * S.measScale * S.measScale;
+          logA(
+            `Parcel drawn directly (${S.topo.parcels[0].vids.length} vertices, area ${aDisp.toFixed(1)} m²)`,
+          );
+          toast("Parcel created — no split needed", "ok");
+          draw();
+          updatePcList();
+          return;
+        }
+
+        const vmap = new Map();
+        S.topo.vertices.forEach((v, i) => {
+          const k = `${Math.round(v.x * PREC) / PREC},${Math.round(v.y * PREC) / PREC}`;
+          vmap.set(k, i);
+        });
+        const vids = pts.map((p) => {
+          const k = `${Math.round(p.x * PREC) / PREC},${Math.round(p.y * PREC) / PREC}`;
+          if (!vmap.has(k)) {
+            vmap.set(k, S.topo.vertices.length);
+            S.topo.vertices.push({ x: p.x, y: p.y });
+          }
+          return vmap.get(k);
+        });
+
+        const clean = [];
+        vids.forEach((v) => {
+          if (clean[clean.length - 1] !== v) clean.push(v);
+        });
+        if (clean.length > 1 && clean[0] === clean[clean.length - 1]) clean.pop();
+        if (clean.length < 3) {
+          toast("Parcel needs at least 3 distinct corners", "er");
+          return;
+        }
+
+        const n = S.topo.parcels.length;
+        S.topo.parcels.push({
+          vids: clean,
+          color: COLORS[n % COLORS.length],
+          label: `Lot ${n}`,
+        });
+        clean.forEach((v) => insertVidOnParcelEdges(v));
+        S.selParcels = [n];
+        setStep(3);
+        const aDisp = pArea(S.topo.parcels[n]) * S.measScale * S.measScale;
+        logA(
+          `Parcel drawn (${clean.length} vertices, area ${aDisp.toFixed(1)} m²)`,
+        );
+        toast("Parcel added", "ok");
+        draw();
+        updatePcList();
+      }
+
+      function renameParcel(i) {
+        if (!S.topo || !S.topo.parcels[i]) return;
+        const cur = S.topo.parcels[i].label;
+        const nn = prompt("Parcel name:", cur);
+        if (nn === null) return;
+        const name = nn.trim();
+        if (!name) {
+          toast("Name cannot be empty", "er");
+          return;
+        }
+        S.topo.parcels[i].label = name;
+        draw();
+        updatePcList();
+        toast("Parcel renamed", "ok");
+      }
+
       function clearDraw() {
         S.drawPts = [];
         S.drawDone = false;
         S.outerGeo = null;
         S.topo = null;
+        S.selParcels = [];
+        S.selVtxs = [];
+        S.selEdges = [];
+        S.showPcLen = {};
+        S.showPcAng = {};
+        S.targetPcts = {};
         S.lockedEdges = [];
         document.getElementById("btn-split").disabled = true;
         document.getElementById("split-badge").textContent = "needs polygon";
@@ -3744,18 +4232,22 @@
         const cls = {
           pan: "",
           draw: "on-p",
+          "draw-parcel": "on-p",
           select: "on",
           "edit-outer": "on-y",
           "edit-bg": "on",
           calibrate: "on-p",
         };
-        ["pan", "draw", "select", "edit-outer", "edit-bg", "calibrate"].forEach((n) => {
-          const b = document.getElementById(`tool-${n}`);
-          if (!b) return;
-          b.classList.remove("on", "on-p", "on-g", "on-y");
-          if (n === t) b.classList.add(cls[n] || "on");
-        });
-        canvas.style.cursor = t === "draw" ? "crosshair" : "default";
+        ["pan", "draw", "draw-parcel", "select", "edit-outer", "edit-bg", "calibrate"].forEach(
+          (n) => {
+            const b = document.getElementById(`tool-${n}`);
+            if (!b) return;
+            b.classList.remove("on", "on-p", "on-g", "on-y");
+            if (n === t) b.classList.add(cls[n] || "on");
+          },
+        );
+        canvas.style.cursor =
+          t === "draw" || t === "draw-parcel" ? "crosshair" : "default";
         const bd = document.getElementById("btn-draw-tool");
         if (bd) bd.classList.toggle("active", t === "draw");
         draw();
@@ -3785,8 +4277,11 @@
           .slice(0, -1)
           .map(([x, y]) => ({ x, y }));
         S.topo = buildTopo(geo);
-        S.selParcel = null;
+        S.selParcels = [];
         S.selVtxs = [];
+        S.showPcLen = {};
+        S.showPcAng = {};
+        S.targetPcts = {};
         document.getElementById("btn-split").disabled = false;
         document.getElementById("split-badge").textContent = "ready ✓";
         document.getElementById("split-badge").style.background = "var(--g)";
@@ -3817,7 +4312,11 @@
         try {
           const geo = JSON.parse(raw);
           S.topo = buildTopo(geo);
-          
+
+          S.selParcels = [];
+          S.showPcLen = {};
+          S.showPcAng = {};
+          S.targetPcts = {};
           const m = S.measScale || 1;
           S.topo.vertices.forEach(v => {
             v.x /= m;
@@ -3881,19 +4380,189 @@
         toast("Image exported", "ok");
       }
 
+      const PROJ_VERSION = 1;
+
+      function saveProject() {
+        const proj = {
+          app: "pee-project",
+          version: PROJ_VERSION,
+          savedAt: new Date().toISOString(),
+          state: {
+            topo: S.topo
+              ? {
+                  vertices: S.topo.vertices.map((v) => ({ x: v.x, y: v.y })),
+                  parcels: S.topo.parcels.map((p) => ({
+                    vids: [...p.vids],
+                    color: p.color,
+                    label: p.label,
+                  })),
+                  outer: S.topo.outer.map((v) => ({ x: v.x, y: v.y })),
+                }
+              : null,
+            outerGeo: S.outerGeo
+              ? S.outerGeo.map((v) => ({ x: v.x, y: v.y }))
+              : null,
+            drawPts: S.drawPts.map((v) => ({ x: v.x, y: v.y })),
+            drawDone: S.drawDone,
+            measScale: S.measScale,
+            lockedEdges: (S.lockedEdges || []).map((le) => ({
+              v1: le.v1,
+              v2: le.v2,
+            })),
+            bg: { ...S.bg },
+            bgImage: S.bgImage ? S.bgImage.src : null,
+            view: { zoom: S.zoom, pan: { ...S.pan } },
+            tool: S.tool,
+            toggles: {
+              dragMode: S.dragMode,
+              liveEq: S.liveEq,
+              allMovable: S.allMovable,
+              gridOpacity: S.gridOpacity,
+              lblOpacity: S.lblOpacity,
+              showOuterLen: S.showOuterLen,
+              showOuterAng: S.showOuterAng,
+            },
+            showPcLen: { ...S.showPcLen },
+            showPcAng: { ...S.showPcAng },
+            targetPcts: { ...S.targetPcts },
+            labelPos: { ...S.labelPos },
+            settings: {
+              apiUrl: document.getElementById("api-url").value,
+              maxIter: document.getElementById("max-iter").value,
+              tol: document.getElementById("tol").value,
+              nRange: document.getElementById("n-range").value,
+              splitDir: document.getElementById("split-dir").value,
+            },
+          },
+        };
+        const blob = new Blob([JSON.stringify(proj, null, 2)], {
+          type: "application/json",
+        });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "map-project.json";
+        a.click();
+        URL.revokeObjectURL(a.href);
+        toast("Project saved", "ok");
+      }
+
+      function loadProject(input) {
+        const file = input.files[0];
+        input.value = "";
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          try {
+            const proj = JSON.parse(e.target.result);
+            if (proj.app !== "pee-project" || !proj.state) {
+              toast("Not a valid project file", "er");
+              return;
+            }
+            applyProjectState(proj.state);
+          } catch (err) {
+            toast("Load error: " + err.message, "er");
+          }
+        };
+        reader.readAsText(file);
+      }
+
+      function applyProjectState(st) {
+        S.topo = st.topo || null;
+        S.outerGeo = st.outerGeo || null;
+        S.drawPts = st.drawPts || [];
+        S.drawDone = !!st.drawDone;
+        S.measScale = typeof st.measScale === "number" ? st.measScale : 1;
+        S.lockedEdges = st.lockedEdges || [];
+        S.bg = st.bg
+          ? { ...st.bg }
+          : { x: 0, y: 0, scale: 1, rot: 0, opacity: 0.5 };
+        S.bgImage = null;
+        if (st.bgImage) {
+          const img = new Image();
+          img.onload = function () {
+            S.bgImage = img;
+            draw();
+          };
+          img.src = st.bgImage;
+          document.getElementById("bg-controls").style.display = "block";
+          document.getElementById("bg-op").value = S.bg.opacity;
+          document.getElementById("bg-rt").value = S.bg.rot;
+          document.getElementById("bg-x").value = S.bg.x;
+          document.getElementById("bg-y").value = S.bg.y;
+        } else {
+          document.getElementById("bg-controls").style.display = "none";
+        }
+        if (st.view) {
+          S.zoom = st.view.zoom || 40;
+          S.pan = st.view.pan ? { ...st.view.pan } : { x: 15, y: 5 };
+        }
+        const tg = st.toggles || {};
+        S.dragMode = tg.dragMode !== false;
+        S.liveEq = !!tg.liveEq;
+        S.allMovable = tg.allMovable !== false;
+        S.gridOpacity =
+          typeof tg.gridOpacity === "number" ? tg.gridOpacity : 1;
+        S.lblOpacity =
+          typeof tg.lblOpacity === "number" ? tg.lblOpacity : 0.8;
+        S.labelPos = st.labelPos || {};
+        S.showOuterLen = !!tg.showOuterLen;
+        S.showOuterAng = !!tg.showOuterAng;
+        S.showPcLen = st.showPcLen || {};
+        S.showPcAng = st.showPcAng || {};
+        S.targetPcts = st.targetPcts || {};
+        S.selParcels = [];
+        S.selVtxs = [];
+        S.selEdges = [];
+        const se = st.settings || {};
+        if (se.apiUrl != null)
+          document.getElementById("api-url").value = se.apiUrl;
+        if (se.maxIter != null)
+          document.getElementById("max-iter").value = se.maxIter;
+        if (se.tol != null) document.getElementById("tol").value = se.tol;
+        if (se.nRange != null) {
+          document.getElementById("n-range").value = se.nRange;
+          syncN(se.nRange);
+        }
+        if (se.splitDir != null)
+          document.getElementById("split-dir").value = se.splitDir;
+        document.getElementById("grid-op").value = S.gridOpacity;
+        document.getElementById("lbl-op").value = S.lblOpacity;
+        syncTog("tog-drag", S.dragMode);
+        syncTog("tog-live", S.liveEq);
+        syncTog("tog-all", S.allMovable);
+        document.getElementById("scale-lbl").textContent =
+          "Scale: " + S.measScale.toFixed(4) + "x";
+        const hasGeo = !!(S.outerGeo && S.outerGeo.length >= 3);
+        document.getElementById("btn-split").disabled = !hasGeo;
+        const badge = document.getElementById("split-badge");
+        badge.textContent = hasGeo ? "ready ✓" : "needs polygon";
+        badge.style.background = hasGeo ? "var(--g)" : "";
+        document.getElementById("hint").style.opacity =
+          S.topo || S.outerGeo ? "0" : "1";
+        if (S.topo) setStep(3);
+        else if (S.outerGeo) setStep(2);
+        else setStep(1);
+        setTool(st.tool || "draw");
+        updateZLbl();
+        updateDrawStatus();
+        draw();
+        updatePcList();
+        logA("Project loaded");
+        toast("Project loaded", "ok");
+      }
+
+      function syncTog(id, on) {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle("on", !!on);
+      }
+
       function toggleMeas(type, idx, kind) {
         if (type === 'outer') {
           if (kind === 'len') S.showOuterLen = S.showOuterLen === false ? true : false;
           if (kind === 'ang') S.showOuterAng = S.showOuterAng === false ? true : false;
         } else if (type === 'pc') {
-          if (kind === 'len') {
-            if (!S.showPcLen) S.showPcLen = {};
-            S.showPcLen[idx] = S.showPcLen[idx] === false ? true : false;
-          }
-          if (kind === 'ang') {
-            if (!S.showPcAng) S.showPcAng = {};
-            S.showPcAng[idx] = S.showPcAng[idx] === false ? true : false;
-          }
+          if (kind === 'len') S.showPcLen[idx] = !S.showPcLen[idx];
+          if (kind === 'ang') S.showPcAng[idx] = !S.showPcAng[idx];
         }
         draw();
         updatePcList();
@@ -3925,16 +4594,7 @@
           }),
         };
 
-        let ta = null;
-        const taRaw = document.getElementById("ta-json").value.trim();
-        if (taRaw) {
-          ta = getTargetAreas();
-          if (!ta) {
-            toast("Bad target areas JSON", "er");
-            done();
-            return;
-          }
-        }
+        let ta = getTargetAreas();
 
         const url = document.getElementById("api-url").value.replace(/\/$/, "");
         
@@ -4055,6 +4715,7 @@
             '<p style="color:var(--t3);font-size:11px">No parcels yet.</p>';
           document.getElementById("hdr-a").textContent = "–";
           document.getElementById("hdr-n").textContent = "–";
+          syncCombineUI();
           return;
         }
 
@@ -4068,18 +4729,26 @@
           const a = pArea(p);
           const taDisp = ta * S.measScale * S.measScale;
           const aDisp = a * S.measScale * S.measScale;
+          const curPct = tot > 0 ? (ta / tot) * 100 : 0;
           const ep = ta > 0 ? ((a - ta) / ta) * 100 : 0;
           const abs = Math.abs(ep);
           const ec = abs < 0.1 ? "eg" : abs < 2 ? "ew" : "eb";
           const bar = Math.min(100, (a / (tot / S.topo.parcels.length)) * 50);
-          const sel = S.selParcel === i;
+          const sel = S.selParcels.includes(i);
           const el = document.createElement("div");
           el.className = `pc${sel ? " sel" : ""}`;
           el.dataset.idx = i;
-          el.onclick = () => {
-            S.selParcel = i;
+          el.onclick = (ev) => {
+            const additive = ev.shiftKey || ev.ctrlKey || ev.metaKey;
+            if (additive) {
+              const k = S.selParcels.indexOf(i);
+              if (k >= 0) S.selParcels.splice(k, 1);
+              else S.selParcels.push(i);
+            } else {
+              S.selParcels = [i];
+            }
             draw();
-            hiPc(i);
+            hiPc();
           };
           el.onmouseenter = () => {
             S.hoveredParcelId = i;
@@ -4091,29 +4760,62 @@
               _origDraw();
             }
           };
-          const showPLen = (!S.showPcLen || S.showPcLen[i] !== false);
-          const showPAng = (!S.showPcAng || S.showPcAng[i] !== false);
+          const showPLen = !!S.showPcLen[i];
+          const showPAng = !!S.showPcAng[i];
           el.innerHTML = `<div class="pch" style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-  <div style="display:flex; align-items:center;">
+  <div style="display:flex; align-items:center; min-width:0; flex:1;">
     <div class="pcd" style="background:${p.color}"></div>
-    <div class="pcn">${p.label}</div>
+    <div class="pcn" style="cursor:text; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="Double-click to rename" ondblclick="event.stopPropagation(); renameParcel(${i})">${xe(p.label)}</div>
   </div>
   <div>
+    <span style="cursor:pointer; font-size: 12px; margin-right: 4px; opacity: 0.55" onclick="event.stopPropagation(); renameParcel(${i})" title="Rename parcel">✎</span>
     <span style="cursor:pointer; font-size: 13px; margin-right: 4px; opacity: ${showPLen ? 1 : 0.3}" onclick="event.stopPropagation(); toggleMeas('pc', ${i}, 'len')" title="Toggle lengths">📏</span>
     <span style="cursor:pointer; font-size: 13px; opacity: ${showPAng ? 1 : 0.3}" onclick="event.stopPropagation(); toggleMeas('pc', ${i}, 'ang')" title="Toggle angles">📐</span>
   </div>
 </div>
-<div class="pca">${aDisp.toFixed(2)} m² <span style="color:var(--t3)">→ ${taDisp.toFixed(1)}</span></div>
-<div class="pce ${ec}">${ep >= 0 ? "+" : ""}${ep.toFixed(2)}%</div>
-<div class="pb"><div class="pf" style="width:${bar}%;background:${p.color}"></div></div>`;
+<div class="pca">${aDisp.toFixed(2)} m² <span style="color:var(--t3)">→ <span id="pc-ta-${i}">${taDisp.toFixed(1)}</span></span></div>
+<div style="display:flex;align-items:center;gap:6px;margin-top:3px;">
+  <span style="font-size:10px;color:var(--t2);">Tgt %</span>
+  <input id="pc-pct-${i}" type="number" min="0" step="0.5" value="${curPct.toFixed(1)}"
+    oninput="event.stopPropagation(); setTargetPct(${i}, this.value, true)"
+    onfocus="event.stopPropagation()"
+    onmousedown="event.stopPropagation()"
+    onclick="event.stopPropagation()"
+    style="flex:1;min-width:0;background:var(--bg3);border:1px solid var(--border);color:var(--t1);border-radius:4px;padding:2px 5px;font-size:11px;font-family:'JetBrains Mono',monospace;" />
+</div>
+<div class="pce ${ec}" id="pc-ep-${i}">${ep >= 0 ? "+" : ""}${ep.toFixed(2)}%</div>
+<div class="pb"><div class="pf" id="pc-bar-${i}" style="width:${bar}%;background:${p.color}"></div></div>`;
           div.appendChild(el);
         });
+        refreshTgtInfo();
+        syncCombineUI();
       }
 
-      function hiPc(idx) {
+      function hiPc() {
         document
           .querySelectorAll(".pc")
-          .forEach((el) => el.classList.toggle("sel", +el.dataset.idx === idx));
+          .forEach((el) =>
+            el.classList.toggle("sel", S.selParcels.includes(+el.dataset.idx)),
+          );
+        syncCombineUI();
+      }
+
+      function syncCombineUI() {
+        const bar = document.getElementById("pc-actions");
+        if (!bar) return;
+        if (!S.topo) {
+          bar.style.display = "none";
+          return;
+        }
+        bar.style.display = "flex";
+        const n = S.selParcels.length;
+        const cnt = document.getElementById("pc-sel-count");
+        if (cnt)
+          cnt.textContent = n
+            ? `${n} parcel${n > 1 ? "s" : ""} selected`
+            : "Shift+click parcels to multi-select";
+        const btn = document.getElementById("btn-combine");
+        if (btn) btn.disabled = n < 2;
       }
 
       function updateStats(s) {
@@ -4147,8 +4849,11 @@
         S.outerGeo = null;
         S.drawPts = [];
         S.drawDone = false;
-        S.selParcel = null;
+        S.selParcels = [];
         S.selVtxs = [];
+        S.showPcLen = {};
+        S.showPcAng = {};
+        S.targetPcts = {};
         S.hoverVtx = null;
         S.dragVtx = null;
         S.dragEdge = null;

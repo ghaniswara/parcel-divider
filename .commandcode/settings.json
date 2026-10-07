@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Shell(python check.py && python \"C:\\Users\\gagah\\AppData\\Local\\Temp\\commandcode\\G--Repo-map-plotting\\079bc073-ca01-432f-afd9-ebc503199a86\\scratchpad\\extract.py\" && node -e \"const fs=require('fs'); new Function(fs.readFileSync(String.raw`C:\\Users\\gagah\\AppData\\Local\\Temp\\commandcode\\G--Repo-map-plotting\\079bc073-ca01-432f-afd9-ebc503199a86\\scratchpad\\gui_script.js`,'utf8')); console.log('PARSE_OK')\")"
+    ],
+    "deny": [],
+    "defaultMode": "default"
+  }
+}
