@@ -12,7 +12,9 @@ GET /health
 
 Static files
 ------------
-The /ui route serves the browser-based interactive editor from gui/index.html.
+The / route serves the original single-file editor from gui/index.html.
+The /v2 route serves the component/module based rewrite from gui/v2/
+(original left untouched).
 """
 
 from __future__ import annotations
@@ -51,6 +53,25 @@ app.add_middleware(
 GUI_DIR = Path(__file__).parent / "gui"
 if GUI_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(GUI_DIR)), name="static")
+
+# Serve the v2 GUI (web components + ES modules rewrite of gui/index.html)
+V2_GUI_DIR = GUI_DIR / "v2"
+if V2_GUI_DIR.exists():
+    app.mount(
+        "/v2",
+        StaticFiles(directory=str(V2_GUI_DIR), html=True),
+        name="v2",
+    )
+
+
+@app.middleware("http")
+async def no_cache_v2(request, call_next):
+    """Send /v2 assets with Cache-Control: no-cache so GUI edits are
+    picked up by plain reloads (files are small; revalidation is cheap)."""
+    response = await call_next(request)
+    if request.url.path.startswith("/v2"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 # ---------------------------------------------------------------------------
